@@ -1,4 +1,6 @@
 #include "helper_functions.h"
+#include "cpu.h"
+#include "memory_map.h"
 
 #include <cstdint>
 #include <iostream>
@@ -22,10 +24,22 @@ int main()
 		abort();
 	}
 
-	for (;;) {
+	uint8_t* vram = new uint8_t[0x200];
+	uint8_t* io = new uint8_t[0x80];
 
+	MemoryMap memoryMap{
+		{ internalROM,  AddressRange{ 0x0,    0x100 } },
+		{ cartridgeROM, AddressRange{ 0x0,    0x4000 } },
+		{ vram,         AddressRange{ 0x8000, 0x2000 } },
+		{ io,           AddressRange{ 0xFF00, 0x80 } }
+	};
+
+	CPU cpu(memoryMap);
+	for (;;) {
+		cpu.runInstruction();
 	}
 
+	delete[] vram;
 	delete[] cartridgeROM;
 	return 0;
 }
