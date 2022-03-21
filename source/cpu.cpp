@@ -4,8 +4,502 @@
 
 #include <iostream>
 
+using i = CPU; // To make table concise
+
 CPU::CPU(MemoryMap& memoryMap) :
-	m_memoryMap(memoryMap)
+	m_memoryMap(memoryMap),
+	m_instructionSet{
+		{ &i::NOP, &i::IMP, 4  }, { &i::LD, &i::IMMEX, 12 }, { &i::LD, &i::INDREG, 8 }, { &i::INC, &i::REG, 8 }, { &i::INC, &i::REG, 4 }, { &i::DEC, &i::REG, 4 }, { &i::LD, &i::IMM, 8 }, { &i::RLCA, &i::IMP, 4 },
+		{ &i::LD,  &i::ABS, 20 }, 
+- ---ADD HL,BC
+1  8
+- 0 H C	LD A,(BC)
+1  8
+- ---DEC BC
+1  8
+- ---INC C
+1  4
+Z 0 H - DEC C
+1  4
+Z 1 H - LD C,d8
+2  8
+- ---RRCA
+1  4
+0 0 0 C
+ 1x 	STOP 0
+2  4
+- ---LD DE,d16
+3  12
+- ---LD(DE),A
+1  8
+- ---INC DE
+1  8
+- ---INC D
+1  4
+Z 0 H - DEC D
+1  4
+Z 1 H - LD D,d8
+2  8
+- ---RLA
+1  4
+0 0 0 C	JR r8
+2  12
+- ---ADD HL,DE
+1  8
+- 0 H C	LD A,(DE)
+1  8
+- ---DEC DE
+1  8
+- ---INC E
+1  4
+Z 0 H - DEC E
+1  4
+Z 1 H - LD E,d8
+2  8
+- ---RRA
+1  4
+0 0 0 C
+ 2x 	JR NZ,r8
+2  12 / 8
+- ---LD HL,d16
+3  12
+- ---LD(HL + ),A
+1  8
+- ---INC HL
+1  8
+- ---INC H
+1  4
+Z 0 H - DEC H
+1  4
+Z 1 H - LD H,d8
+2  8
+- ---DAA
+1  4
+Z - 0 C	JR Z,r8
+2  12 / 8
+- ---ADD HL,HL
+1  8
+- 0 H C	LD A,(HL + )
+1  8
+- ---DEC HL
+1  8
+- ---INC L
+1  4
+Z 0 H - DEC L
+1  4
+Z 1 H - LD L,d8
+2  8
+- ---CPL
+1  4
+- 1 1 -
+ 3x 	JR NC,r8
+2  12 / 8
+- ---LD SP,d16
+3  12
+- ---LD(HL - ),A
+1  8
+- ---INC SP
+1  8
+- ---INC(HL)
+1  12
+Z 0 H - DEC(HL)
+1  12
+Z 1 H - LD(HL),d8
+2  12
+- ---SCF
+1  4
+- 0 0 1	JR C,r8
+2  12 / 8
+- ---ADD HL,SP
+1  8
+- 0 H C	LD A,(HL - )
+1  8
+- ---DEC SP
+1  8
+- ---INC A
+1  4
+Z 0 H - DEC A
+1  4
+Z 1 H - LD A,d8
+2  8
+- ---CCF
+1  4
+- 0 0 C
+ 4x 	LD B,B
+1  4
+- ---LD B,C
+1  4
+- ---LD B,D
+1  4
+- ---LD B,E
+1  4
+- ---LD B,H
+1  4
+- ---LD B,L
+1  4
+- ---LD B,(HL)
+1  8
+- ---LD B,A
+1  4
+- ---LD C,B
+1  4
+- ---LD C,C
+1  4
+- ---LD C,D
+1  4
+- ---LD C,E
+1  4
+- ---LD C,H
+1  4
+- ---LD C,L
+1  4
+- ---LD C,(HL)
+1  8
+- ---LD C,A
+1  4
+- ---
+ 5x 	LD D,B
+1  4
+- ---LD D,C
+1  4
+- ---LD D,D
+1  4
+- ---LD D,E
+1  4
+- ---LD D,H
+1  4
+- ---LD D,L
+1  4
+- ---LD D,(HL)
+1  8
+- ---LD D,A
+1  4
+- ---LD E,B
+1  4
+- ---LD E,C
+1  4
+- ---LD E,D
+1  4
+- ---LD E,E
+1  4
+- ---LD E,H
+1  4
+- ---LD E,L
+1  4
+- ---LD E,(HL)
+1  8
+- ---LD E,A
+1  4
+- ---
+ 6x 	LD H,B
+1  4
+- ---LD H,C
+1  4
+- ---LD H,D
+1  4
+- ---LD H,E
+1  4
+- ---LD H,H
+1  4
+- ---LD H,L
+1  4
+- ---LD H,(HL)
+1  8
+- ---LD H,A
+1  4
+- ---LD L,B
+1  4
+- ---LD L,C
+1  4
+- ---LD L,D
+1  4
+- ---LD L,E
+1  4
+- ---LD L,H
+1  4
+- ---LD L,L
+1  4
+- ---LD L,(HL)
+1  8
+- ---LD L,A
+1  4
+- ---
+ 7x 	LD(HL),B
+1  8
+- ---LD(HL),C
+1  8
+- ---LD(HL),D
+1  8
+- ---LD(HL),E
+1  8
+- ---LD(HL),H
+1  8
+- ---LD(HL),L
+1  8
+- ---HALT
+1  4
+- ---LD(HL),A
+1  8
+- ---LD A,B
+1  4
+- ---LD A,C
+1  4
+- ---LD A,D
+1  4
+- ---LD A,E
+1  4
+- ---LD A,H
+1  4
+- ---LD A,L
+1  4
+- ---LD A,(HL)
+1  8
+- ---LD A,A
+1  4
+- ---
+ 8x 	ADD A,B
+1  4
+Z 0 H C	ADD A,C
+1  4
+Z 0 H C	ADD A,D
+1  4
+Z 0 H C	ADD A,E
+1  4
+Z 0 H C	ADD A,H
+1  4
+Z 0 H C	ADD A,L
+1  4
+Z 0 H C	ADD A,(HL)
+1  8
+Z 0 H C	ADD A,A
+1  4
+Z 0 H C	ADC A,B
+1  4
+Z 0 H C	ADC A,C
+1  4
+Z 0 H C	ADC A,D
+1  4
+Z 0 H C	ADC A,E
+1  4
+Z 0 H C	ADC A,H
+1  4
+Z 0 H C	ADC A,L
+1  4
+Z 0 H C	ADC A,(HL)
+1  8
+Z 0 H C	ADC A,A
+1  4
+Z 0 H C
+ 9x 	SUB B
+1  4
+Z 1 H C	SUB C
+1  4
+Z 1 H C	SUB D
+1  4
+Z 1 H C	SUB E
+1  4
+Z 1 H C	SUB H
+1  4
+Z 1 H C	SUB L
+1  4
+Z 1 H C	SUB(HL)
+1  8
+Z 1 H C	SUB A
+1  4
+Z 1 H C	SBC A,B
+1  4
+Z 1 H C	SBC A,C
+1  4
+Z 1 H C	SBC A,D
+1  4
+Z 1 H C	SBC A,E
+1  4
+Z 1 H C	SBC A,H
+1  4
+Z 1 H C	SBC A,L
+1  4
+Z 1 H C	SBC A,(HL)
+1  8
+Z 1 H C	SBC A,A
+1  4
+Z 1 H C
+ Ax 	AND B
+1  4
+Z 0 1 0	AND C
+1  4
+Z 0 1 0	AND D
+1  4
+Z 0 1 0	AND E
+1  4
+Z 0 1 0	AND H
+1  4
+Z 0 1 0	AND L
+1  4
+Z 0 1 0	AND(HL)
+1  8
+Z 0 1 0	AND A
+1  4
+Z 0 1 0	XOR B
+1  4
+Z 0 0 0	XOR C
+1  4
+Z 0 0 0	XOR D
+1  4
+Z 0 0 0	XOR E
+1  4
+Z 0 0 0	XOR H
+1  4
+Z 0 0 0	XOR L
+1  4
+Z 0 0 0	XOR(HL)
+1  8
+Z 0 0 0	XOR A
+1  4
+Z 0 0 0
+ Bx 	OR B
+1  4
+Z 0 0 0	OR C
+1  4
+Z 0 0 0	OR D
+1  4
+Z 0 0 0	OR E
+1  4
+Z 0 0 0	OR H
+1  4
+Z 0 0 0	OR L
+1  4
+Z 0 0 0	OR(HL)
+1  8
+Z 0 0 0	OR A
+1  4
+Z 0 0 0	CP B
+1  4
+Z 1 H C	CP C
+1  4
+Z 1 H C	CP D
+1  4
+Z 1 H C	CP E
+1  4
+Z 1 H C	CP H
+1  4
+Z 1 H C	CP L
+1  4
+Z 1 H C	CP(HL)
+1  8
+Z 1 H C	CP A
+1  4
+Z 1 H C
+ Cx 	RET NZ
+1  20 / 8
+- ---POP BC
+1  12
+- ---JP NZ,a16
+3  16 / 12
+- ---JP a16
+3  16
+- ---CALL NZ,a16
+3  24 / 12
+- ---PUSH BC
+1  16
+- ---ADD A,d8
+2  8
+Z 0 H C	RST 00H
+1  16
+- ---RET Z
+1  20 / 8
+- ---RET
+1  16
+- ---JP Z,a16
+3  16 / 12
+- ---PREFIX CB
+1  4
+- ---CALL Z,a16
+3  24 / 12
+- ---CALL a16
+3  24
+- ---ADC A,d8
+2  8
+Z 0 H C	RST 08H
+1  16
+- ---
+ Dx 	RET NC
+1  20 / 8
+- ---POP DE
+1  12
+- ---JP NC,a16
+3  16 / 12
+- ---CALL NC,a16
+3  24 / 12
+- ---PUSH DE
+1  16
+- ---SUB d8
+2  8
+Z 1 H C	RST 10H
+1  16
+- ---RET C
+1  20 / 8
+- ---RETI
+1  16
+- ---JP C,a16
+3  16 / 12
+- ---CALL C,a16
+3  24 / 12
+- ---SBC A,d8
+2  8
+Z 1 H C	RST 18H
+1  16
+- ---
+ Ex 	LDH(a8),A
+2  12
+- ---POP HL
+1  12
+- ---LD(C),A
+2  8
+- ---PUSH HL
+1  16
+- ---AND d8
+2  8
+Z 0 1 0	RST 20H
+1  16
+- ---ADD SP,r8
+2  16
+0 0 H C	JP(HL)
+1  4
+- ---LD(a16),A
+3  16
+- ---XOR d8
+2  8
+Z 0 0 0	RST 28H
+1  16
+- ---
+ Fx 	LDH A,(a8)
+2  12
+- ---POP AF
+1  12
+Z N H C	LD A,(C)
+2  8
+- ---DI
+1  4
+- ---PUSH AF
+1  16
+- ---OR d8
+2  8
+Z 0 0 0	RST 30H
+1  16
+- ---LD HL,SP + r8
+2  12
+0 0 H C	LD SP,HL
+1  8
+- ---LD A,(a16)
+3  16
+- ---EI
+1  4
+- ---CP d8
+2  8
+Z 1 H C	RST 38H
+1  16
+- ---
+}
 {
 	size_t size = 256;
 	if (!readFile("assets/DMG_ROM.bin", (char*)m_internalROM, size, true)) {
@@ -19,75 +513,22 @@ CPU::CPU(MemoryMap& memoryMap) :
 void CPU::reset()
 {
 	PC = 0x0;
+	m_currentInstructionCyclesLeft = 4; // Let's say that reset takes 4 clock cycles
 }
 
 void CPU::doCycles(size_t cycles)
 {
-	m_is16bitOp = false;
-	m_isIndirectAddressing = false;
+	while (cycles--) {
+		if (m_currentInstructionCyclesLeft == 0) {
 
-	uint8_t instruction = (this->*m_readByteFunc)(PC++);
-	switch (instruction)
-	{
-	case 0x00:
-		NOP();
-		break;
-	case 0x0E:
-		m_activeReg8 = &C;
-		m_imm8 = m_memoryMap.load8(PC++);
-		LD();
-		break;
-	case 0x20:
-		m_imm8_s = m_memoryMap.load8(PC++);
-		JR(0x80);
-		break;
-	case 0x21:
-		m_is16bitOp = true;
-		m_activeReg16 = &HL;
-		//m_imm16 = m_memoryMap.load16(PC);
-		PC += 2;
-		LD();
-		break;
-	case 0x31:
-		m_is16bitOp = true;
-		m_activeReg16 = &SP;
-		//m_imm16 = m_memoryMap.load16(PC);
-		PC += 2;
-		LD();
-		break;
-	case 0x32:
-		m_isIndirectAddressing = true;
-		m_activeReg16 = &HL;
-		m_activeReg8 = &A;
-		LD();
-		--HL;
-		break;
-	case 0x3E:
-		m_activeReg8 = &A;
-		m_imm8 = m_memoryMap.load8(PC++);
-		LD();
-		break;
-	case 0xAF:
-		m_activeReg8 = &A;
-		XOR();
-		break;
-	case 0xCB:
-		instruction = m_memoryMap.load8(PC++);
-		switch (instruction)
-		{
-		case 0x7C:
-			m_activeReg8 = &H;
-			BIT(7);
-			break;
-		default:
-			abort();
+			uint8_t opcode = (this->*m_readByteFunc)(PC++);
+			const Instruction& instruction = m_instructionSet[opcode];
+			m_currentInstructionCyclesLeft = instruction.cycles;
+			(this->*instruction.addressing)();
+			(this->*instruction.operation)();
 		}
-		break;
-	case 0xE2:
-		m_isIndirectAddressing = true;
-		break;
-	default:
-		abort();
+
+		--m_currentInstructionCyclesLeft;
 	}
 }
 
@@ -104,40 +545,62 @@ uint8_t CPU::readByteInternal(uint16_t address)
 	return m_internalROM[address];
 }
 
+void CPU::IMP()
+{
+}
+
+void CPU::IMM()
+{
+}
+
+void CPU::IMMEX()
+{
+}
+
+void CPU::REG()
+{
+}
+
+void CPU::INDREG()
+{
+}
+
+void CPU::ABS()
+{
+}
+
+void CPU::MZP()
+{
+}
+
+void CPU::REL()
+{
+}
+
+void CPU::MIDX()
+{
+}
+
+void CPU::BITA()
+{
+}
+
 void CPU::NOP()
 {
 }
 
-void CPU::JR(uint8_t mask)
-{
-	bool con = (F.byte & mask);
-	if (con)
-		PC += m_imm8_s;
+void CPU::LD()
+{	
 }
 
-void CPU::LD()
-{
-	if (m_is16bitOp)
-		*m_activeReg16 = m_imm16;
-	else {
-		if (m_isIndirectAddressing) {
-			m_memoryMap.store8(*m_activeReg16, *m_activeReg8);
-		}
-		else {
-			*m_activeReg8 = m_imm8;
-		}
-	}
+void CPU::JR()
+{	
 }
 
 void CPU::XOR()
-{
-	A ^= *m_activeReg8;
-	F.zeroFlag = !A;
+{	
 }
 
-void CPU::BIT(uint8_t n)
+void CPU::BIT()
 {
-	F.zeroFlag = (*m_activeReg8 >> n) & 1;
-	F.subtractFlag = 0;
-	F.halfCarryFlag = 1;
 }

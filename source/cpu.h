@@ -16,14 +16,31 @@ private:
 	uint8_t readByteInternal(uint16_t address);
 
 	// addressing modes:
-	void IMP();
-	void IMM();
+	void IMP();    // implied
+	void IMM();    // immediate
+	void IMMEX();  // extended immediate
+	void REG();    // register
+	void INDREG(); // indirect register
+	void ABS();    // absolute
+	void MZP();    // modified zero page
+	void REL();    // relative
+	void MIDX();   // modified index
+	void BITA();   // bit
 
-	void NOP();
-	void JR(uint8_t mask);
-	void LD();
-	void XOR();
-	void BIT(uint8_t n);
+	// 1 byte instructions:
+	void NOP();  void LD();  void INC();  void DEC();
+	void RLCA(); void ADD(); void RRCA(); void STOP();
+	void RLA();  void JR();  void RRA();  void DAA();
+	void CPL();  void SCF(); void CCF();  void HALT();
+	void ADC();  void SUB(); void SBC();  void AND();
+	void XOR();  void OR();  void CP();   void RET();
+	void POP();  void JP();  void CALL(); void PUSH();
+	void RST();  void CB();  void RETI(); void LDH();
+	void DI();   void EI();
+	// prefix CB instructions:
+	void RLC();  void RRC(); void RL();   void RR();
+	void SLA();  void SRA(); void SWAP(); void SRL();
+	void BIT();  void RES(); void SET();
 
 	union FlagsRegister {
 		struct {
@@ -70,6 +87,16 @@ private:
 	uint8_t(CPU::* m_readByteFunc)(uint16_t) = &CPU::readByteInternal;
 	uint8_t m_internalROM[256];
 	MemoryMap& m_memoryMap;
+
+	struct Instruction {
+		void(CPU::* operation)();
+		void(CPU::* addressing)();
+		uint8_t cycles;
+	};
+	Instruction m_instructionSet[256];
+	//Instruction m_prefixCBinstructionSet[256];
+	uint8_t m_currentInstructionCyclesLeft;
+
 	uint8_t* m_activeReg8 = nullptr;
 	uint16_t* m_activeReg16 = nullptr;
 	uint8_t m_imm8 = 0;

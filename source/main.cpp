@@ -1,9 +1,6 @@
 #include "cpu.h"
 #include "memory_map.h"
 
-#include <cstdint>
-#include <iostream>
-
 class GameBoy
 {
 public:
