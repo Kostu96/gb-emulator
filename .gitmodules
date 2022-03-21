@@ -1,3 +1,6 @@
 [submodule "SFML"]
 	path = third_party/SFML
 	url = https://github.com/SFML/SFML.git
+[submodule "cpp-common"]
+	path = third_party/cpp-common
+	url = https://github.com/Kostu96/cpp-common-lib.git

@@ -16,16 +16,16 @@ private:
 	uint8_t readByteInternal(uint16_t address);
 
 	// addressing modes:
-	void IMP();    // implied
-	void IMM();    // immediate
-	void IMMEX();  // extended immediate
-	void REG();    // register
-	void INDREG(); // indirect register
-	void ABS();    // absolute
-	void MZP();    // modified zero page
-	void REL();    // relative
-	void MIDX();   // modified index
-	void BITA();   // bit
+	void IMP();   // implied
+	void IMM();   // immediate
+	void IMMEX(); // extended immediate
+	void REG();   // register
+	void INR();   // indirect register
+	void ABS();   // absolute
+	void MZP();   // modified zero page
+	void REL();   // relative
+	void MIDX();  // modified index
+	void BITA();  // bit
 
 	// 1 byte instructions:
 	void NOP();  void LD();  void INC();  void DEC();
@@ -91,17 +91,22 @@ private:
 	struct Instruction {
 		void(CPU::* operation)();
 		void(CPU::* addressing)();
-		uint8_t cycles;
+		union {
+			uint8_t byte;
+			struct {
+				uint8_t cycles : 5; // 0-4
+				uint8_t unused : 2; // 5-6
+				uint8_t is16bit : 1; // 7
+			};
+		};
 	};
 	Instruction m_instructionSet[256];
 	//Instruction m_prefixCBinstructionSet[256];
 	uint8_t m_currentInstructionCyclesLeft;
 
-	uint8_t* m_activeReg8 = nullptr;
-	uint16_t* m_activeReg16 = nullptr;
-	uint8_t m_imm8 = 0;
-	int8_t m_imm8_s = 0;
-	uint16_t m_imm16 = 0;
-	bool m_is16bitOp = false;
-	bool m_isIndirectAddressing = false;
+	// helper variables
+	uint8_t m_currentOpcode;
+	bool m_is16bit;
+	bool m_isREG;
+	uint16_t m_operandAddress;
 };
