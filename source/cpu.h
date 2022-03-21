@@ -94,8 +94,9 @@ private:
 		union {
 			uint8_t byte;
 			struct {
-				uint8_t cycles : 5; // 0-4
-				uint8_t unused : 2; // 5-6
+				uint8_t cycles : 5;  // 0-4
+				uint8_t unused : 1;  // 5
+				uint8_t isStore : 1; // 6
 				uint8_t is16bit : 1; // 7
 			};
 		};
@@ -106,6 +107,7 @@ private:
 
 	// helper variables
 	uint8_t m_currentOpcode;
+	bool m_isStore;
 	bool m_is16bit;
 	bool m_isREG;
 	uint16_t m_operandAddress;

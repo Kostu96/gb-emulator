@@ -17,7 +17,7 @@ struct AddressRange {
 class MemoryMap
 {
 public:
-	MemoryMap() : m_cartridge("assets/dmg-acid2.gb") {} // TODO: temp until insertCartridge interface
+	MemoryMap() : m_cartridge("assets/test_roms/dmg-acid2.gb") {} // TODO: temp until insertCartridge interface
 	MemoryMap(MemoryMap&) = delete;
 
 	uint8_t load8(uint16_t address) const;

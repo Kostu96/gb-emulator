@@ -30,8 +30,8 @@ assure_out_of_source_builds()
 
 project(gb-emu-proj LANGUAGES CXX)
 set(TARGET_NAME gbEmulator)
-set(TARGET_NAME_LIB ${TARGET_NAME}_lib)
-set(TARGET_NAME_TESTS ${TARGET_NAME}_tests)
+#set(TARGET_NAME_LIB ${TARGET_NAME}_lib)
+#set(TARGET_NAME_TESTS ${TARGET_NAME}_tests)
 
 add_subdirectory(third_party)
 add_subdirectory(source)

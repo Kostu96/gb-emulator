@@ -1,4 +1,5 @@
 #include "cpu.h"
+#include "memory_map.h"
 
 void CPU::IMP()
 {
@@ -20,7 +21,9 @@ void CPU::REG()
 {}
 
 void CPU::INR()
-{}
+{
+    m_operandAddress = HL;
+}
 
 void CPU::ABS()
 {}
@@ -42,17 +45,28 @@ void CPU::NOP()
 
 void CPU::LD()
 {
-    uint8_t operand = (this->*m_readByteFunc)(m_operandAddress);
+    uint8_t operand = 0;
+    uint16_t operand16 = 0;
+
+    if (!m_isStore)
+        operand = (this->*m_readByteFunc)(m_operandAddress);
 
     if (m_is16bit) {
-        uint16_t operand16 = (this->*m_readByteFunc)(m_operandAddress + 1);
-        operand16 <<= 8;
-        operand16 |= operand;
+        if (!m_isStore) {
+            operand16 = (this->*m_readByteFunc)(m_operandAddress + 1);
+            operand16 <<= 8;
+            operand16 |= operand;
+        }
 
         switch (m_currentOpcode) {
+        case 0x21:
+            HL = operand16;
+            break;
         case 0x31:
             SP = operand16;
             break;
+        case 0x32:
+            m_memoryMap.store8(m_operandAddress, A);
         }
     }
 }

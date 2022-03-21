@@ -1,6 +1,6 @@
 #include "cartridge.h"
-#include "helper_functions.h"
 
+#include <cpp-common/helper_functions.h>
 #include <iostream>
 
 Cartridge::Cartridge(const char* filename)
