@@ -1,12 +1,32 @@
 #include "cpu.h"
 #include "memory_map.h"
+#include "helper_functions.h"
 
-void CPU::runInstruction()
+#include <iostream>
+
+CPU::CPU(MemoryMap& memoryMap) :
+	m_memoryMap(memoryMap)
+{
+	size_t size = 256;
+	if (!readFile("assets/DMG_ROM.bin", (char*)m_internalROM, size, true)) {
+		std::cerr << "Failed to read internal ROM file!\n";
+		abort();
+	}
+
+	reset();
+};
+
+void CPU::reset()
+{
+	PC = 0x0;
+}
+
+void CPU::doCycles(size_t cycles)
 {
 	m_is16bitOp = false;
 	m_isIndirectAddressing = false;
 
-	uint8_t instruction = m_memoryMap.load8(PC++);
+	uint8_t instruction = (this->*m_readByteFunc)(PC++);
 	switch (instruction)
 	{
 	case 0x00:
@@ -24,14 +44,14 @@ void CPU::runInstruction()
 	case 0x21:
 		m_is16bitOp = true;
 		m_activeReg16 = &HL;
-		m_imm16 = m_memoryMap.load16(PC);
+		//m_imm16 = m_memoryMap.load16(PC);
 		PC += 2;
 		LD();
 		break;
 	case 0x31:
 		m_is16bitOp = true;
 		m_activeReg16 = &SP;
-		m_imm16 = m_memoryMap.load16(PC);
+		//m_imm16 = m_memoryMap.load16(PC);
 		PC += 2;
 		LD();
 		break;
@@ -69,6 +89,19 @@ void CPU::runInstruction()
 	default:
 		abort();
 	}
+}
+
+uint8_t CPU::readByte(uint16_t address)
+{
+	return m_memoryMap.load8(address);
+}
+
+uint8_t CPU::readByteInternal(uint16_t address)
+{
+	if (address > 0xFF)
+		abort();
+
+	return m_internalROM[address];
 }
 
 void CPU::NOP()

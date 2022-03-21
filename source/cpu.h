@@ -6,11 +6,19 @@ class MemoryMap;
 class CPU
 {
 public:
-	CPU(MemoryMap& memoryMap) : m_memoryMap(memoryMap) {};
+	CPU(MemoryMap& memoryMap);
 	CPU(CPU&) = delete;
 
-	void runInstruction();
+	void reset();
+	void doCycles(size_t cycles);
 private:
+	uint8_t readByte(uint16_t address);
+	uint8_t readByteInternal(uint16_t address);
+
+	// addressing modes:
+	void IMP();
+	void IMM();
+
 	void NOP();
 	void JR(uint8_t mask);
 	void LD();
@@ -30,41 +38,37 @@ private:
 
 	union {
 		struct {
-			union {
-				struct {
-					FlagsRegister F;
-					uint8_t A;
-				};
-				uint16_t AF;
-			};
-			union {
-				struct {
-					uint8_t C;
-					uint8_t B;
-				};
-				uint16_t BC;
-			};
-			union {
-				struct {
-					uint8_t E;
-					uint8_t D;
-				};
-				uint16_t DE;
-			};
-			union {
-				struct {
-					uint8_t L;
-					uint8_t H;
-				};
-				uint16_t HL;
-			};
-			uint16_t SP;
-			uint16_t PC;
+			FlagsRegister F;
+			uint8_t A;
 		};
-		uint8_t registers[12];
-		uint16_t registerPairs[6]{};
+		uint16_t AF;
 	};
+	union {
+		struct {
+			uint8_t C;
+			uint8_t B;
+		};
+		uint16_t BC;
+	};
+	union {
+		struct {
+			uint8_t E;
+			uint8_t D;
+		};
+		uint16_t DE;
+	};
+	union {
+		struct {
+			uint8_t L;
+			uint8_t H;
+		};
+		uint16_t HL;
+	};
+	uint16_t SP;
+	uint16_t PC;
 
+	uint8_t(CPU::* m_readByteFunc)(uint16_t) = &CPU::readByteInternal;
+	uint8_t m_internalROM[256];
 	MemoryMap& m_memoryMap;
 	uint8_t* m_activeReg8 = nullptr;
 	uint16_t* m_activeReg16 = nullptr;
