@@ -27,4 +27,5 @@ public:
 	void insertCartridge(const char* filename) { m_cartridge.insert(filename); }
 private:
 	Cartridge m_cartridge;
+	uint8_t m_HRAM[0x80];
 };

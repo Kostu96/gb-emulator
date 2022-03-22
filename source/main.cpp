@@ -13,7 +13,7 @@ public:
 	void run()
 	{
 		for (;;) {
-			m_cpu.doCycles(100);
+			m_cpu.doCycles(5000);
 		}
 	}
 private:

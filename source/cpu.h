@@ -19,8 +19,6 @@ private:
 	// addressing modes:
 	void IMP();   // implied
 	void IMM();   // immediate
-	void IMMEX(); // extended immediate
-	void REG();   // register
 	void INR();   // indirect register
 	void ABS();   // absolute
 	void MZP();   // modified zero page
@@ -109,14 +107,12 @@ private:
 		};
 	};
 	Instruction m_instructionSet[256];
-	//Instruction m_prefixCBinstructionSet[256];
 	uint8_t m_currentInstructionCyclesLeft;
 
 	// helper variables
 	uint8_t m_currentOpcode;
 	bool m_isStore;
 	bool m_is16bit;
-	bool m_isREG;
 	bool m_isCBInstruction;
 	uint16_t m_operandAddress;
 };
