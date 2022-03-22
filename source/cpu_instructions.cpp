@@ -7,14 +7,14 @@ void CPU::IMP()
 
 void CPU::IMM()
 {
-    m_operandAddress = PC++;
+    m_operandAddress = m_registerNamed.PC++;
 }
 
 void CPU::IMMEX()
 {
     // TODO: this can be merged with IMM using is16bit
-    m_operandAddress = PC;
-    PC += 2;
+    m_operandAddress = m_registerNamed.PC;
+    m_registerNamed.PC += 2;
 }
 
 void CPU::REG()
@@ -22,7 +22,7 @@ void CPU::REG()
 
 void CPU::INR()
 {
-    m_operandAddress = HL;
+    m_operandAddress = m_registerNamed.HL;
 }
 
 void CPU::ABS()
@@ -57,13 +57,15 @@ void CPU::LD()
 
         switch (m_currentOpcode) {
         case 0x21:
-            HL = operand16;
+            m_registerNamed.HL = operand16;
             break;
         case 0x31:
-            SP = operand16;
+            m_registerNamed.SP = operand16;
             break;
         case 0x32:
-            m_memoryMap.store8(m_operandAddress, A);
+            m_memoryMap.store8(m_operandAddress, m_registerNamed.A);
+            --m_registerNamed.HL;
+            break;
         }
     }
 }
@@ -127,13 +129,13 @@ void CPU::XOR()
     if (m_isREG) {
         switch (m_currentOpcode) {
         case 0xAF:
-            A ^= A;
+            m_registerNamed.A ^= m_registerNamed.A;
             break;
         }
     }
 
-    F.byte = 0;
-    F.zeroFlag = A == 0;
+    m_registerNamed.F.byte = 0;
+    m_registerNamed.F.zeroFlag = m_registerNamed.A == 0;
 }
 
 void CPU::OR()
@@ -163,13 +165,26 @@ void CPU::RST()
 void CPU::CB()
 {
     if (m_isCBInstruction) {
-        switch (m_currentOpcode) {
+        uint8_t bit0 = (m_currentOpcode >> 0) & 1;
+        uint8_t bit1 = (m_currentOpcode >> 1) & 1;
+        uint8_t bit2 = (m_currentOpcode >> 2) & 1;
+        uint8_t bit3 = (m_currentOpcode >> 2) & 1;
+        uint8_t regIndex =
+            ((!bit2 & bit1) | (bit2 & !bit1) | (bit2 & !bit0)) << 0 |
+            ((bit2 & !bit0) | bit1) << 1 |
+            ((bit2 & bit1) | !bit0) << 2;
 
+        uint8_t targetBit = ((m_currentOpcode & 0x70) >> 4) | bit3;
+        
+            switch (m_currentOpcode) {
+        case 0x7C:
+            BIT(regIndex, targetBit);
+            break;
         }
         m_isCBInstruction = false;
     }
     else
-        m_isCBInstruction = false;
+        m_isCBInstruction = true;
 }
 
 void CPU::RETI()
@@ -184,35 +199,45 @@ void CPU::DI()
 void CPU::EI()
 {}
 
-void CPU::RLC()
+void CPU::RLC(uint8_t regIndex)
 {}
 
-void CPU::RRC()
+void CPU::RRC(uint8_t regIndex)
 {}
 
-void CPU::RL()
+void CPU::RL(uint8_t regIndex)
 {}
 
-void CPU::RR()
+void CPU::RR(uint8_t regIndex)
 {}
 
-void CPU::SLA()
+void CPU::SLA(uint8_t regIndex)
 {}
 
-void CPU::SRA()
+void CPU::SRA(uint8_t regIndex)
 {}
 
-void CPU::SWAP()
+void CPU::SWAP(uint8_t regIndex)
 {}
 
-void CPU::SRL()
+void CPU::SRL(uint8_t regIndex)
 {}
 
-void CPU::BIT()
+void CPU::BIT(uint8_t regIndex, uint8_t targetBit)
+{
+    if ((m_currentOpcode & 0xF) == 0x6 || (m_currentOpcode & 0xF) == 0xE) {
+        m_registerNamed.F.zeroFlag = ((this->*m_readByteFunc)(m_registerNamed.HL) >> targetBit) & 1;
+    }
+    else {
+        m_registerNamed.F.zeroFlag = (m_registerArray[regIndex] >> targetBit) & 1;
+    }
+    
+    m_registerNamed.F.subtractFlag = 0;
+    m_registerNamed.F.halfCarryFlag = 1;
+}
+
+void CPU::RES(uint8_t regIndex)
 {}
 
-void CPU::RES()
-{}
-
-void CPU::SET()
+void CPU::SET(uint8_t regIndex)
 {}

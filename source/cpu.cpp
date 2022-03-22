@@ -39,7 +39,7 @@ CPU::CPU(MemoryMap& memoryMap) :
 void CPU::reset()
 {
 	m_currentInstructionCyclesLeft = 4; // Let's say that reset takes 4 clock cycles
-	PC = 0x0;
+	m_registerNamed.PC = 0x0;
 
 	// helper variables
 	m_currentOpcode = 0x0;
@@ -55,14 +55,18 @@ void CPU::doCycles(size_t cycles)
 	while (cycles--) {
 		if (m_currentInstructionCyclesLeft == 0) {
 
-			m_currentOpcode = (this->*m_readByteFunc)(PC++);
+			m_currentOpcode = (this->*m_readByteFunc)(m_registerNamed.PC++);
 			const Instruction& instruction = m_instructionSet[m_currentOpcode];
 			m_currentInstructionCyclesLeft = instruction.cycles;
 			m_isStore = instruction.isStore;
 			m_is16bit = instruction.is16bit;
 			m_isREG = instruction.addressing == &CPU::REG;
-			(this->*instruction.addressing)();
-			(this->*instruction.operation)();
+			if (m_isCBInstruction)
+				CB();
+			else {
+				(this->*instruction.addressing)();
+				(this->*instruction.operation)();
+			}
 		}
 
 		--m_currentInstructionCyclesLeft;
