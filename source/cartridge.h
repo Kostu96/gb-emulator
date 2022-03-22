@@ -1,14 +1,13 @@
 #pragma once
+#include <cpp-common/non_copyable.h>
 #include <cstdint>
 
-class Cartridge
+class Cartridge :
+    public NonCopyable
 {
 public:
     Cartridge(const char* filename);
     ~Cartridge();
-
-    Cartridge(Cartridge&) = delete;
-    Cartridge& operator=(Cartridge&) = delete;
 private:
     uint8_t* m_data;
 };

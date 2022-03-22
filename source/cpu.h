@@ -1,13 +1,14 @@
 #pragma once
+#include <cpp-common/non_copyable.h>
 #include <cstdint>
 
 class MemoryMap;
 
-class CPU
+class CPU :
+	public NonCopyable
 {
 public:
 	CPU(MemoryMap& memoryMap);
-	CPU(CPU&) = delete;
 
 	void reset();
 	void doCycles(size_t cycles);
@@ -25,7 +26,6 @@ private:
 	void MZP();   // modified zero page
 	void REL();   // relative
 	void MIDX();  // modified index
-	void BITA();  // bit
 
 	// 1 byte instructions:
 	void NOP();  void LD();  void INC();  void DEC();
@@ -110,5 +110,6 @@ private:
 	bool m_isStore;
 	bool m_is16bit;
 	bool m_isREG;
+	bool m_isCBInstruction;
 	uint16_t m_operandAddress;
 };

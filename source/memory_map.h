@@ -1,6 +1,7 @@
 #pragma once
 #include "cartridge.h"
 
+#include <cpp-common/non_copyable.h>
 #include <cstdint>
 
 struct AddressRange {
@@ -14,11 +15,11 @@ struct AddressRange {
 	}
 };
 
-class MemoryMap
+class MemoryMap :
+	public NonCopyable
 {
 public:
 	MemoryMap() : m_cartridge("assets/test_roms/dmg-acid2.gb") {} // TODO: temp until insertCartridge interface
-	MemoryMap(MemoryMap&) = delete;
 
 	uint8_t load8(uint16_t address) const;
 	void store8(uint16_t address, uint8_t byte);

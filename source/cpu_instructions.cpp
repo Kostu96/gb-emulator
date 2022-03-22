@@ -37,9 +37,6 @@ void CPU::REL()
 void CPU::MIDX()
 {}
 
-void CPU::BITA()
-{}
-
 void CPU::NOP()
 {}
 
@@ -164,7 +161,16 @@ void CPU::RST()
 {}
 
 void CPU::CB()
-{}
+{
+    if (m_isCBInstruction) {
+        switch (m_currentOpcode) {
+
+        }
+        m_isCBInstruction = false;
+    }
+    else
+        m_isCBInstruction = false;
+}
 
 void CPU::RETI()
 {}
