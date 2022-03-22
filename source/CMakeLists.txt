@@ -18,6 +18,7 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX source FILES ${SOURCE_FILES
 
 target_link_libraries(${TARGET_NAME}
     cpp-common-lib
+    sfml-graphics
 )
 
 set_target_properties(${TARGET_NAME} PROPERTIES

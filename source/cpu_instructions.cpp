@@ -32,7 +32,9 @@ void CPU::MZP()
 {}
 
 void CPU::REL()
-{}
+{
+    m_operandAddress = m_registerNamed.PC++;
+}
 
 void CPU::MIDX()
 {}
@@ -92,7 +94,17 @@ void CPU::RLA()
 {}
 
 void CPU::JR()
-{}
+{
+    int8_t rel = (this->*m_readByteFunc)(m_operandAddress);
+    switch (m_currentOpcode) {
+    case 0x20:
+        if (m_registerNamed.F.zeroFlag == 1) {
+            m_currentInstructionCyclesLeft += 4;
+            m_registerNamed.PC += rel;
+        }
+        break;
+    }
+}
 
 void CPU::RRA()
 {}

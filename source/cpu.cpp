@@ -39,6 +39,7 @@ CPU::CPU(MemoryMap& memoryMap) :
 void CPU::reset()
 {
 	m_currentInstructionCyclesLeft = 4; // Let's say that reset takes 4 clock cycles
+	m_registerNamed.F.byte = 0x0;
 	m_registerNamed.PC = 0x0;
 
 	// helper variables
