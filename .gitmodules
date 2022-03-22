@@ -4,3 +4,6 @@
 [submodule "cpp-common"]
 	path = third_party/cpp-common
 	url = https://github.com/Kostu96/cpp-common-lib.git
+[submodule "gtest"]
+	path = third_party/gtest
+	url = https://github.com/google/googletest.git
