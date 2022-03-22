@@ -56,13 +56,41 @@ static size_t ROMSizeCodeToKB(uint8_t code) {
 	return 0xDEADBEEF;
 }
 
-Cartridge::Cartridge(const char* filename)
+static size_t RAMSizeCodeToKB(uint8_t code) {
+	switch (code) {
+	case 0x00: return 0;
+	case 0x02: return 8;
+	case 0x03: return 32;
+	case 0x04: return 128;
+	case 0x05: return 64;
+	}
+
+	abort();
+	return 0xDEADBEEF;
+}
+
+Cartridge::~Cartridge()
+{
+	delete[] m_data;
+}
+
+uint8_t Cartridge::load8(uint16_t address) const
+{
+	return uint8_t();
+}
+
+void Cartridge::store8(uint16_t address, uint8_t byte)
+{
+
+}
+
+void Cartridge::insert(const char* filename)
 {
 	if (!readFile(filename, nullptr, m_size, true)) {
 		std::cerr << "Failed to read size of cartridge ROM file!\n";
 		abort();
 	}
-	
+
 	if (m_size < 0x8000) {
 		std::cerr << "Size of cartridge ROM is less than 32KB!\n";
 		abort();
@@ -80,6 +108,9 @@ Cartridge::Cartridge(const char* filename)
 	for (uint16_t i = 0x0134; i <= 0x014C; ++i)
 		x = x - m_data[i] - 1;
 
+	if (m_header->CGBFlag == 0xC0)
+		std::cerr << "WARNING: CGB only flag is set!";
+
 	if (m_header->headerChecksum != (x & 0xFF))
 		std::cerr << "WARNING: Header checksum test doen't pass!\n";
 
@@ -87,14 +118,10 @@ Cartridge::Cartridge(const char* filename)
 		std::cerr << "WARNING: Header ROM size is different than file size read!\n";
 
 	std::cout << "Loaded cartridge ROM file: " << filename << '\n'
-		      << "Size loaded: " << m_size / 1024 << "KB\n"
-		      << "Header:\n"
-		      << "  Title:    " << m_header->title << '\n'
-		      << "  Type:     " << CartridgeTypeCodeToStr(m_header->cartridgeTypeCode) << '\n'
-		      << "  ROM size: " << ROMSizeCodeToKB(m_header->ROMSizeCode) << "KB\n";
-}
-
-Cartridge::~Cartridge()
-{
-	delete[] m_data;
+		<< "Size loaded: " << m_size / 1024 << "KB\n"
+		<< "Header:\n"
+		<< "  Title:    " << m_header->title << '\n'
+		<< "  Type:     " << CartridgeTypeCodeToStr(m_header->cartridgeTypeCode) << '\n'
+		<< "  ROM size: " << ROMSizeCodeToKB(m_header->ROMSizeCode) << "KB\n"
+		<< "  RAM size: " << RAMSizeCodeToKB(m_header->RAMSizeCode) << "KB\n";
 }

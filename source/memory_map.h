@@ -19,11 +19,12 @@ class MemoryMap :
 	public NonCopyable
 {
 public:
-	MemoryMap() : m_cartridge("assets/test_roms/dmg-acid2.gb") {} // TODO: temp until insertCartridge interface
+	MemoryMap() = default;
 
 	uint8_t load8(uint16_t address) const;
 	void store8(uint16_t address, uint8_t byte);
+
+	void insertCartridge(const char* filename) { m_cartridge.insert(filename); }
 private:
-	// TODO: insertCartridge interface
 	Cartridge m_cartridge;
 };

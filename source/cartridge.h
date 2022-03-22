@@ -6,8 +6,13 @@ class Cartridge :
     public NonCopyable
 {
 public:
-    Cartridge(const char* filename);
+    Cartridge() = default;
     ~Cartridge();
+
+    uint8_t load8(uint16_t address) const;
+    void store8(uint16_t address, uint8_t byte);
+
+    void insert(const char* filename);
 private:
     struct Header {
         uint8_t entryPoint[4];      // 0x100 - 0x103
@@ -26,7 +31,7 @@ private:
         uint8_t globalChecksum;     // 0x14E - 0x14F
     };
 
-    uint8_t* m_data;
-    size_t m_size;
-    Header* m_header;
+    Header* m_header = nullptr;
+    uint8_t* m_data = nullptr;
+    size_t m_size = 0;
 };

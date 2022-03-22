@@ -7,7 +7,7 @@ public:
 	GameBoy() :
 		m_cpu(m_memoryMap)
 	{
-
+		m_memoryMap.insertCartridge("assets/test_roms/cpu_instrs.gb");
 	}
 
 	void run()
