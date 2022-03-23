@@ -73,7 +73,7 @@ void CPU::LD()
             m_registerNamed.C = operand;
             break;
         case 0x32:
-            m_memoryMap.store8(m_operandAddress, m_registerNamed.A);
+            storeByte(m_operandAddress, m_registerNamed.A);
             --m_registerNamed.HL;
             break;
         case 0x3E:
@@ -81,7 +81,7 @@ void CPU::LD()
             break;
         case 0x77:
         case 0xE2:
-            m_memoryMap.store8(m_operandAddress, m_registerNamed.A);
+            storeByte(m_operandAddress, m_registerNamed.A);
             break;
         }
     }
@@ -303,8 +303,8 @@ void CPU::CALL()
     switch (m_currentOpcode) {
     case 0xCD:
         m_registerNamed.SP -= 2;
-        m_memoryMap.store8(m_registerNamed.SP, m_registerNamed.PC & 0xFF);
-        m_memoryMap.store8(m_registerNamed.SP + 1, (m_registerNamed.PC >> 8) & 0xFF);
+        storeByte(m_registerNamed.SP, m_registerNamed.PC & 0xFF);
+        storeByte(m_registerNamed.SP + 1, (m_registerNamed.PC >> 8) & 0xFF);
         m_registerNamed.PC = m_operandAddress;
         break;
     }
@@ -315,20 +315,20 @@ void CPU::PUSH()
     m_registerNamed.SP -= 2;
     switch (m_currentOpcode) {
     case 0xC5:
-        m_memoryMap.store8(m_registerNamed.SP, m_registerNamed.C);
-        m_memoryMap.store8(m_registerNamed.SP + 1, m_registerNamed.B);
+        storeByte(m_registerNamed.SP, m_registerNamed.C);
+        storeByte(m_registerNamed.SP + 1, m_registerNamed.B);
         break;
     case 0xD5:
-        m_memoryMap.store8(m_registerNamed.SP, m_registerNamed.E);
-        m_memoryMap.store8(m_registerNamed.SP + 1, m_registerNamed.D);
+        storeByte(m_registerNamed.SP, m_registerNamed.E);
+        storeByte(m_registerNamed.SP + 1, m_registerNamed.D);
         break;
     case 0xE5:
-        m_memoryMap.store8(m_registerNamed.SP, m_registerNamed.L);
-        m_memoryMap.store8(m_registerNamed.SP + 1, m_registerNamed.H);
+        storeByte(m_registerNamed.SP, m_registerNamed.L);
+        storeByte(m_registerNamed.SP + 1, m_registerNamed.H);
         break;
     case 0xF5:
-        m_memoryMap.store8(m_registerNamed.SP, m_registerNamed.F.byte);
-        m_memoryMap.store8(m_registerNamed.SP + 1, m_registerNamed.A);
+        storeByte(m_registerNamed.SP, m_registerNamed.F.byte);
+        storeByte(m_registerNamed.SP + 1, m_registerNamed.A);
         break;
     }
 }
@@ -372,7 +372,7 @@ void CPU::LDH()
 {
     uint16_t address = 0xFF00 | (this->*m_readByteFunc)(m_operandAddress);
     if (m_isStore) {
-        m_memoryMap.store8(address, m_registerNamed.A);
+        storeByte(address, m_registerNamed.A);
     }
     else {
         m_registerNamed.A = (this->*m_readByteFunc)(address);

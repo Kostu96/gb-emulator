@@ -27,12 +27,6 @@ CPU::CPU(MemoryMap& memoryMap) :
 		{ &i::LDH,  &i::IMM, 12    }, { &i::POP, &i::IMP, 12     }, { &i::LD,  &i::MIDX, 8    }, { &i::DI,  &i::IMP, 4  }, { &i::NOP,  &i::IMP, 4  }, { &i::PUSH, &i::IMP, 16 }, { &i::OR,   &i::IMM, 8  }, { &i::RST,  &i::MZP, 16   }, { &i::LD,  &i::IMP, 12 }, { &i::LD,   &i::IMP, 8, }, { &i::LD,  &i::ABS, 16    }, { &i::EI,  &i::IMP, 4 }, { &i::NOP,  &i::IMP, 4  }, { &i::NOP,  &i::IMP, 4  }, { &i::CP,  &i::IMM, 8 }, { &i::RST,  &i::MZP, 16 }
 	}
 {
-	size_t size = 256;
-	if (!readFile("assets/DMG_ROM.bin", (char*)m_internalROM, size, true)) {
-		std::cerr << "Failed to read internal ROM file!\n";
-		abort();
-	}
-
 	reset();
 };
 
@@ -72,15 +66,31 @@ void CPU::doCycles(size_t cycles)
 	}
 }
 
-uint8_t CPU::readByte(uint16_t address)
+uint8_t CPU::readByte(uint16_t address) const
 {
+	if (address == 0xFFFF)
+		return m_interruptControl;
+
 	return m_memoryMap.load8(address);
 }
 
-uint8_t CPU::readByteInternal(uint16_t address)
+#include "bootloader.inl"
+
+uint8_t CPU::readByteInternal(uint16_t address) const
 {
+	if (address == 0xFFFF)
+		return m_interruptControl;
+
 	if (address < 0x100)
-		return m_internalROM[address];
+		return internalROM[address];
 
 	return m_memoryMap.load8(address);
+}
+
+void CPU::storeByte(uint16_t address, uint8_t byte)
+{
+	if (address == 0xFFFF)
+		m_interruptControl = byte;
+	else
+		m_memoryMap.store8(address, byte);
 }

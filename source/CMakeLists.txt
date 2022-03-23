@@ -1,4 +1,5 @@
 set(SOURCE_FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/bootloader.inl
     ${CMAKE_CURRENT_SOURCE_DIR}/cartridge.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/cartridge.h
     ${CMAKE_CURRENT_SOURCE_DIR}/cpu.cpp

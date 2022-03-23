@@ -13,8 +13,9 @@ public:
 	void reset();
 	void doCycles(size_t cycles);
 private:
-	uint8_t readByte(uint16_t address);
-	uint8_t readByteInternal(uint16_t address);
+	uint8_t readByte(uint16_t address) const;
+	uint8_t readByteInternal(uint16_t address) const;
+	void storeByte(uint16_t address, uint8_t byte);
 
 	// addressing modes:
 	void IMP();   // implied
@@ -89,8 +90,9 @@ private:
 		uint8_t m_registerArray[12];
 	};
 
-	uint8_t(CPU::* m_readByteFunc)(uint16_t) = &CPU::readByteInternal;
-	uint8_t m_internalROM[256];
+	uint8_t m_interruptControl;
+
+	uint8_t(CPU::* m_readByteFunc)(uint16_t) const = &CPU::readByteInternal;
 	MemoryMap& m_memoryMap;
 
 	struct Instruction {
