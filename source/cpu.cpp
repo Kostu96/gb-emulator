@@ -15,6 +15,8 @@ void CPU::reset()
 	m_registerNamed.F.byte = 0x0;
 	m_registerNamed.PC = 0x0;
 
+	m_readByteFunc = &CPU::readByteInternal;
+
 	// helper variables
 	m_currentInstructionCyclesLeft = 4; // Let's say that reset takes 4 clock cycles
 	m_isCBInstruction = false;
@@ -43,13 +45,14 @@ void CPU::executeInstruction(uint8_t opcode)
 
 void CPU::executeInstructionStandard(uint8_t opcode)
 {
-	// TODO: LD reg, reg looks as easly decodable...
+	// TODO: LD reg, reg looks like easly decodable...
 
 	int8_t signedByte;
 	uint8_t tempBit;
 
 	switch (opcode) {
-	case 0x00:  __debugbreak(); break;
+	case 0x00: m_currentInstructionCyclesLeft = 4; // NOP
+		break;
 	case 0x01: m_currentInstructionCyclesLeft = 12; // LD BC, u16
 		m_registerNamed.BC = getImm16();
 		break;
@@ -151,7 +154,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x1F:  __debugbreak(); break;
 	case 0x20: m_currentInstructionCyclesLeft = 8; // JR NZ, i8
 		signedByte = (this->*m_readByteFunc)(m_registerNamed.PC++);
-		if (m_registerNamed.F.zeroFlag == 0) {
+		if (m_registerNamed.F.zeroFlag == 1) {
 			m_currentInstructionCyclesLeft += 4;
 			m_registerNamed.PC += signedByte;
 		}
@@ -165,7 +168,13 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x23: m_currentInstructionCyclesLeft = 8; // INC HL
 		++m_registerNamed.HL;
 		break;
-	case 0x24:  __debugbreak(); break;
+	case 0x24: m_currentInstructionCyclesLeft = 4; // INC H
+		tempBit = m_registerNamed.H & 0x10;
+		++m_registerNamed.H;
+		m_registerNamed.F.halfCarryFlag = ((m_registerNamed.H & 0x10) ^ tempBit) >> 4;
+		m_registerNamed.F.subtractFlag = 0;
+		m_registerNamed.F.zeroFlag = m_registerNamed.H == 0;
+		break;
 	case 0x25: m_currentInstructionCyclesLeft = 4; // DEC H
 		tempBit = m_registerNamed.H & 0x10;
 		--m_registerNamed.H;
@@ -179,7 +188,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x27:  __debugbreak(); break;
 	case 0x28: m_currentInstructionCyclesLeft = 8; // JR Z, i8
 		signedByte = (this->*m_readByteFunc)(m_registerNamed.PC++);
-		if (m_registerNamed.F.zeroFlag == 1) {
+		if (m_registerNamed.F.zeroFlag == 0) {
 			m_currentInstructionCyclesLeft += 4;
 			m_registerNamed.PC += signedByte;
 		}
@@ -322,7 +331,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x6C:  __debugbreak(); break;
 	case 0x6D:  __debugbreak(); break;
 	case 0x6E:  __debugbreak(); break;
-	case 0x6F:  m_currentInstructionCyclesLeft = 4; // LD L, A
+	case 0x6F: m_currentInstructionCyclesLeft = 4; // LD L, A
 		m_registerNamed.L = m_registerNamed.A;
 		break;
 	case 0x70:  __debugbreak(); break;
@@ -335,16 +344,22 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x77: m_currentInstructionCyclesLeft = 8; // LD (HL), A
 		storeByte(m_registerNamed.HL, m_registerNamed.A);
 		break;
-	case 0x78:  __debugbreak(); break;
+	case 0x78: m_currentInstructionCyclesLeft = 4; // LD A, B
+		m_registerNamed.A = m_registerNamed.B;
+		break;
 	case 0x79:  __debugbreak(); break;
 	case 0x7A:  __debugbreak(); break;
-	case 0x7B:  m_currentInstructionCyclesLeft = 4; // LD A, E
+	case 0x7B: m_currentInstructionCyclesLeft = 4; // LD A, E
 		m_registerNamed.A = m_registerNamed.E;
 		break;
-	case 0x7C:  __debugbreak(); break;
-	case 0x7D:  __debugbreak(); break;
+	case 0x7C:  m_currentInstructionCyclesLeft = 4; // LD A, H
+		m_registerNamed.A = m_registerNamed.H;
+		break;
+	case 0x7D: m_currentInstructionCyclesLeft = 4; // LD A, L
+		m_registerNamed.A = m_registerNamed.L;
+		break;
 	case 0x7E:  __debugbreak(); break;
-	case 0x7F:  m_currentInstructionCyclesLeft = 4; // LD A, A
+	case 0x7F: m_currentInstructionCyclesLeft = 4; // LD A, A
 		m_registerNamed.A = m_registerNamed.A;
 		break;
 	case 0x80:  __debugbreak(); break;
@@ -353,7 +368,13 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x83:  __debugbreak(); break;
 	case 0x84:  __debugbreak(); break;
 	case 0x85:  __debugbreak(); break;
-	case 0x86:  __debugbreak(); break;
+	case 0x86: m_currentInstructionCyclesLeft = 8; // ADD A, (HL)
+		m_registerNamed.A += (this->*m_readByteFunc)(m_registerNamed.HL);
+		m_registerNamed.F.zeroFlag = (m_registerNamed.A == 0);
+		m_registerNamed.F.subtractFlag = 0;
+		m_registerNamed.F.halfCarryFlag = 0; // TODO: set if not borrow from bit4
+		m_registerNamed.F.carryFlag = 0; // TODO: ...
+		break;
 	case 0x87:  __debugbreak(); break;
 	case 0x88:  __debugbreak(); break;
 	case 0x89:  __debugbreak(); break;
@@ -363,7 +384,14 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x8D:  __debugbreak(); break;
 	case 0x8E:  __debugbreak(); break;
 	case 0x8F:  __debugbreak(); break;
-	case 0x90:  __debugbreak(); break;
+	case 0x90: m_currentInstructionCyclesLeft = 4; // SUB B
+		signedByte = m_registerNamed.A -= m_registerNamed.B;
+		m_registerNamed.A -= m_registerNamed.B;
+		m_registerNamed.F.zeroFlag = (m_registerNamed.A == 0);
+		m_registerNamed.F.subtractFlag = 1;
+		m_registerNamed.F.halfCarryFlag = 0; // TODO: set if not borrow from bit4
+		m_registerNamed.F.carryFlag = (signedByte >= 0); // TODO: check this, propably wrong
+		break;
 	case 0x91:  __debugbreak(); break;
 	case 0x92:  __debugbreak(); break;
 	case 0x93:  __debugbreak(); break;
@@ -413,7 +441,13 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0xBB:  __debugbreak(); break;
 	case 0xBC:  __debugbreak(); break;
 	case 0xBD:  __debugbreak(); break;
-	case 0xBE:  __debugbreak(); break;
+	case 0xBE: m_currentInstructionCyclesLeft = 8; // CP (HL)
+		signedByte = m_registerNamed.A - (this->*m_readByteFunc)(m_registerNamed.HL);
+		m_registerNamed.F.zeroFlag = (m_registerNamed.A == 0);
+		m_registerNamed.F.subtractFlag = 1;
+		m_registerNamed.F.halfCarryFlag = 0; // TODO: calculate halfCarry
+		m_registerNamed.F.carryFlag = (signedByte < 0);
+		break;
 	case 0xBF:  __debugbreak(); break;
 	case 0xC0:  __debugbreak(); break;
 	case 0xC1: m_currentInstructionCyclesLeft = 12; // POP BC
@@ -816,10 +850,16 @@ uint8_t CPU::readByteInternal(uint16_t address) const
 
 void CPU::storeByte(uint16_t address, uint8_t byte)
 {
-	if (address == 0xFFFF)
+	switch (address) {
+	case 0xFF50:
+		m_readByteFunc = &CPU::readByte;
+		break;
+	case 0xFFFF:
 		m_interruptControl = byte;
-	else
+		break;
+	default:
 		m_memoryMap.store8(address, byte);
+	}	
 }
 
 uint16_t CPU::getImm16()

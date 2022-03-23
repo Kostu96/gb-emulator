@@ -36,19 +36,19 @@ int main(int argc, char* argv[])
             if (!patchFile.is_open())
                 return -1;
 
-            std::stringstream ss;
             std::string line;
             uint16_t address;
-            std::vector<uint8_t> data;
-            std::getline(patchFile, line);
-            ss.str(line);
-            ss << std::hex;
-            ss >> address;
-            uint16_t byte;
-            while (ss >> byte)
-                data.push_back(byte & 0xFF);
+            while (std::getline(patchFile, line)) {
+                std::stringstream ss(line);
+                std::vector<uint8_t> data;
+                ss << std::hex;
+                ss >> address;
+                uint16_t byte;
+                while (ss >> byte)
+                    data.push_back(byte & 0xFF);
 
-            patches.insert({ address, std::move(data) });
+                patches.insert({ address, std::move(data) });
+            } 
         }
 
     std::ofstream outputFile{ argv[2] };

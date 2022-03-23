@@ -74,7 +74,7 @@ private:
 
 	uint8_t m_interruptControl;
 
-	uint8_t(CPU::* m_readByteFunc)(uint16_t) const = &CPU::readByteInternal;
+	uint8_t(CPU::* m_readByteFunc)(uint16_t) const;
 	MemoryMap& m_memoryMap;
 
 	// helper variables

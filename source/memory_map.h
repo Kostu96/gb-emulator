@@ -1,5 +1,6 @@
 #pragma once
 #include "cartridge.h"
+#include "ppu.h"
 
 #include <cpp-common/non_copyable.h>
 #include <cstdint>
@@ -27,5 +28,6 @@ public:
 	void insertCartridge(const char* filename) { m_cartridge.insert(filename); }
 private:
 	Cartridge m_cartridge;
+	PPU m_ppu;
 	uint8_t m_HRAM[0x80];
 };

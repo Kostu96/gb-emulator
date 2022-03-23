@@ -7,10 +7,11 @@ set(SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/memory_map.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/memory_map.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/ppu.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/ppu.h
 )
 
 add_executable(${TARGET_NAME}
-	${CMAKE_CURRENT_SOURCE_DIR}/CMakeLists.txt
     ${SOURCE_FILES}
 )
 

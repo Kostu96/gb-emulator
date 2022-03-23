@@ -76,12 +76,12 @@ Cartridge::~Cartridge()
 
 uint8_t Cartridge::load8(uint16_t address) const
 {
-	return uint8_t();
+	return m_data[address];
 }
 
 void Cartridge::store8(uint16_t address, uint8_t byte)
 {
-
+	__debugbreak();
 }
 
 void Cartridge::insert(const char* filename)
