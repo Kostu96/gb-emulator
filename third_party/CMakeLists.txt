@@ -15,6 +15,8 @@ set_target_properties(
 
 set(SFML_BUILD_NETWORK OFF CACHE BOOL "" FORCE)
 set(SFML_GENERATE_PDB OFF CACHE BOOL "" FORCE)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(SFML_USE_STATIC_STD_LIBS ON CACHE BOOL "" FORCE)
 add_subdirectory(SFML)
 
 set_target_properties(

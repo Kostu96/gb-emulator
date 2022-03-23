@@ -4,7 +4,6 @@ set(SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/cartridge.h
     ${CMAKE_CURRENT_SOURCE_DIR}/cpu.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/cpu.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/cpu_instructions.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/memory_map.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/memory_map.h

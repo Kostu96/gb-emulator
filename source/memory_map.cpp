@@ -15,10 +15,16 @@ uint8_t MemoryMap::load8(uint16_t address) const
 	if (ROM_RANGE.contains(address, offset))
 		return m_cartridge.load8(offset);
 
+	if (VRAM_RANGE.contains(address, offset))
+		return 0xCD; // TODO: temp
+
+	if (PPU_RANGE.contains(address, offset))
+		return 0x90; // TODO: temp
+
 	if (HRAM_RANGE.contains(address, offset))
 		return m_HRAM[offset];
 
-	abort();
+	__debugbreak();
 	return 0xCD;
 }
 
@@ -40,5 +46,5 @@ void MemoryMap::store8(uint16_t address, uint8_t byte)
 		return;
 	}
 
-	abort();
+	__debugbreak();
 }
