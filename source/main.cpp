@@ -7,7 +7,7 @@
 #include <SFML/System/Sleep.hpp>
 #include <thread>
 
-constexpr uint8_t SCALE = 4;
+constexpr uint8_t SCALE = 8;
 static uint32_t palette[4] = { 0xFFFFFFFF, 0xAAAAAAFF, 0x555555FF, 0x000000FF }; // TODO: temp
 
 class GameBoy
@@ -26,7 +26,7 @@ public:
 	{
 		std::thread cpuThread{
 			[&]() {
-				std::this_thread::sleep_for(std::chrono::milliseconds{ 1000 }); // TODO: temp to wait until window initializes
+				std::this_thread::sleep_for(std::chrono::milliseconds{ 250 }); // TODO: temp to wait until window initializes
 				for (;;)
 					m_cpu.doCycles(4);
 			} 
