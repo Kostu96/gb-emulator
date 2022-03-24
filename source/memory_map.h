@@ -20,7 +20,13 @@ class MemoryMap :
 	public NonCopyable
 {
 public:
-	MemoryMap() = default;
+	constexpr static size_t WRAM_SIZE = 0x2000;
+	constexpr static size_t HRAM_SIZE = 0x80;
+
+	MemoryMap();
+	~MemoryMap();
+
+	PPU& getPPU() { return m_PPU; }
 
 	uint8_t load8(uint16_t address) const;
 	void store8(uint16_t address, uint8_t byte);
@@ -28,7 +34,7 @@ public:
 	void insertCartridge(const char* filename) { m_cartridge.insert(filename); }
 private:
 	Cartridge m_cartridge;
-	PPU m_ppu;
-	uint8_t m_WRAM[0x2000];
-	uint8_t m_HRAM[0x80];
+	PPU m_PPU;
+	uint8_t* m_WRAM;
+	uint8_t m_HRAM[HRAM_SIZE];
 };

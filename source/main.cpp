@@ -1,3 +1,7 @@
+// TODO: debug build with checks and realease build without
+// TODO: unit testing
+// TODO: sfml and gtest build in configure step
+
 #include "cpu.h"
 #include "memory_map.h"
 
@@ -7,14 +11,19 @@
 #include <SFML/System/Sleep.hpp>
 #include <thread>
 
-constexpr uint8_t SCALE = 8;
+constexpr uint8_t SCALE = 2;
 static uint32_t palette[4] = { 0xFFFFFFFF, 0xAAAAAAFF, 0x555555FF, 0x000000FF }; // TODO: temp
 
 class GameBoy
 {
 public:
 	GameBoy() :
-		m_window{ sf::VideoMode{ SCALE * 160, SCALE * 144 }, "GameBoy emulator", sf::Style::Close },
+		m_window{
+			sf::VideoMode{ (SCALE * 160) + (2 * SCALE) + (16 * 8 * SCALE),
+			               std::max((SCALE * 144), ( 24 * 8 * SCALE)) },
+			"GameBoy emulator",
+			sf::Style::Close
+		},
 		m_cpu { m_memoryMap }
 	{
 		m_window.setVerticalSyncEnabled(true);
@@ -27,8 +36,8 @@ public:
 		std::thread cpuThread{
 			[&]() {
 				while (true) {
-					std::this_thread::sleep_for(std::chrono::nanoseconds{ 512 }); // TODO: temp
-					m_cpu.doCycles(16);
+					std::this_thread::sleep_for(std::chrono::nanoseconds{ 256 }); // TODO: temp
+					m_cpu.doCycles(4);
 				}
 			} 
 		};
@@ -44,18 +53,18 @@ public:
 
 			m_window.clear(sf::Color::Magenta);
 
-			uint8_t xDraw = 0;
-			uint8_t yDraw = 0;
+			uint32_t xDraw = (SCALE * 160) + (2 * SCALE) + (16 * SCALE);
+			uint32_t yDraw = 0;
 			uint16_t address = 0x8000;
 			for (int y = 0; y < 24; y++) {
 				for (int x = 0; x < 16; x++) {
-					drawTile(address, xDraw + (x * SCALE), yDraw + (y * SCALE));
+					drawTile(address, xDraw, yDraw);
 					xDraw += (8 * SCALE);
 					address += 16;
 				}
 
 				yDraw += (8 * SCALE);
-				xDraw = 0;
+				xDraw = (SCALE * 160) + (2 * SCALE) + (16 * SCALE);;
 			}
 
 			m_window.display();
@@ -64,7 +73,7 @@ public:
 		cpuThread.join();
 	}
 private:
-	void drawTile(uint16_t address, uint8_t x, uint8_t y) {
+	void drawTile(uint16_t address, uint32_t x, uint32_t y) {
 		sf::RectangleShape rect;
 		for (uint8_t tileY = 0; tileY < 16; tileY += 2) {
 			uint8_t b1 = m_memoryMap.load8(address + tileY);
@@ -73,7 +82,7 @@ private:
 				uint8_t color = !!(b1 & (1 << bit)) << 1;
 				color |= !!(b2 & (1 << bit));
 
-				rect.setPosition( x + (7 - bit) * SCALE, y + (tileY / 2) * SCALE);
+				rect.setPosition( x + ((7 - bit) * SCALE), y + (tileY / 2 * SCALE));
 				rect.setSize({ SCALE, SCALE });
 				rect.setFillColor(sf::Color{ palette[color] });
 

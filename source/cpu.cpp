@@ -32,6 +32,7 @@ void CPU::doCycles(size_t cycles)
 		}
 
 		--m_currentInstructionCyclesLeft;
+		m_memoryMap.getPPU().tick();
 	}
 }
 
