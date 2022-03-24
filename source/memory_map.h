@@ -29,5 +29,6 @@ public:
 private:
 	Cartridge m_cartridge;
 	PPU m_ppu;
+	uint8_t m_WRAM[0x2000];
 	uint8_t m_HRAM[0x80];
 };

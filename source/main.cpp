@@ -17,7 +17,7 @@ public:
 		m_window{ sf::VideoMode{ SCALE * 160, SCALE * 144 }, "GameBoy emulator", sf::Style::Close },
 		m_cpu { m_memoryMap }
 	{
-		m_window.setFramerateLimit(60);
+		m_window.setVerticalSyncEnabled(true);
 
 		m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/cpu_instrs/cpu_instrs.gb");
 	}
@@ -26,9 +26,10 @@ public:
 	{
 		std::thread cpuThread{
 			[&]() {
-				std::this_thread::sleep_for(std::chrono::milliseconds{ 250 }); // TODO: temp to wait until window initializes
-				for (;;)
-					m_cpu.doCycles(4);
+				while (true) {
+					std::this_thread::sleep_for(std::chrono::nanoseconds{ 512 }); // TODO: temp
+					m_cpu.doCycles(16);
+				}
 			} 
 		};
 

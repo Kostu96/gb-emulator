@@ -4,6 +4,7 @@
 
 static AddressRange ROM_RANGE{  0x0000, 0x8000 };
 static AddressRange VRAM_RANGE{ 0x8000, 0x2000 };
+static AddressRange WRAM_RANGE{ 0xC000, 0x2000 };
 static AddressRange OAM_RANGE{  0xFE00, 0x00A0 };
 static AddressRange SPU_RANGE{  0xFF00, 0x0040 };
 static AddressRange PPU_RANGE{  0xFF40, 0x0030 };
@@ -18,6 +19,9 @@ uint8_t MemoryMap::load8(uint16_t address) const
 
 	if (VRAM_RANGE.contains(address, offset))
 		return m_ppu.load8VRAM(offset);
+
+	if (WRAM_RANGE.contains(address, offset))
+		return m_WRAM[offset];
 
 	if (OAM_RANGE.contains(address, offset))
 		return m_ppu.load8OAM(offset);
@@ -43,6 +47,11 @@ void MemoryMap::store8(uint16_t address, uint8_t byte)
 
 	if (VRAM_RANGE.contains(address, offset))
 		return m_ppu.store8VRAM(offset, byte);
+
+	if (WRAM_RANGE.contains(address, offset)) {
+		m_WRAM[offset] = byte;
+		return;
+	}
 
 	if (OAM_RANGE.contains(address, offset))
 		return m_ppu.store8OAM(offset, byte);

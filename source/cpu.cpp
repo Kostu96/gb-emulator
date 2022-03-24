@@ -47,6 +47,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 {
 	// TODO: LD reg, reg looks like easly decodable...
 
+	uint16_t tempWord;
 	int8_t signedByte;
 	uint8_t tempBit;
 
@@ -154,7 +155,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x1F:  __debugbreak(); break;
 	case 0x20: m_currentInstructionCyclesLeft = 8; // JR NZ, i8
 		signedByte = (this->*m_readByteFunc)(m_registerNamed.PC++);
-		if (m_registerNamed.F.zeroFlag == 1) {
+		if (m_registerNamed.F.zeroFlag == 0) {
 			m_currentInstructionCyclesLeft += 4;
 			m_registerNamed.PC += signedByte;
 		}
@@ -188,13 +189,15 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x27:  __debugbreak(); break;
 	case 0x28: m_currentInstructionCyclesLeft = 8; // JR Z, i8
 		signedByte = (this->*m_readByteFunc)(m_registerNamed.PC++);
-		if (m_registerNamed.F.zeroFlag == 0) {
+		if (m_registerNamed.F.zeroFlag == 1) {
 			m_currentInstructionCyclesLeft += 4;
 			m_registerNamed.PC += signedByte;
 		}
 		break;
 	case 0x29:  __debugbreak(); break;
-	case 0x2A:  __debugbreak(); break;
+	case 0x2A: m_currentInstructionCyclesLeft = 8; // LD A, (HL+)
+		m_registerNamed.A = (this->*m_readByteFunc)(m_registerNamed.HL++);
+		break;
 	case 0x2B:  __debugbreak(); break;
 	case 0x2C: m_currentInstructionCyclesLeft = 4; // INC L
 		tempBit = m_registerNamed.L & 0x10;
@@ -428,7 +431,11 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 		m_registerNamed.F.zeroFlag = m_registerNamed.A == 0;
 		break;
 	case 0xB0:  __debugbreak(); break;
-	case 0xB1:  __debugbreak(); break;
+	case 0xB1: m_currentInstructionCyclesLeft = 4; // OR C
+		m_registerNamed.A |= m_registerNamed.C;
+		m_registerNamed.F.byte = 0;
+		m_registerNamed.F.zeroFlag = m_registerNamed.A == 0;
+		break;
 	case 0xB2:  __debugbreak(); break;
 	case 0xB3:  __debugbreak(); break;
 	case 0xB4:  __debugbreak(); break;
@@ -454,8 +461,17 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 		m_registerNamed.BC = popReg16();
 		break;
 	case 0xC2:  __debugbreak(); break;
-	case 0xC3:  __debugbreak(); break;
-	case 0xC4:  __debugbreak(); break;
+	case 0xC3: m_currentInstructionCyclesLeft = 16; // JP u16
+		m_registerNamed.PC = getImm16();
+		break;
+	case 0xC4: m_currentInstructionCyclesLeft = 12; // CALL NZ, u16
+		tempWord = getImm16();
+		if (m_registerNamed.F.zeroFlag == 0) {
+			m_currentInstructionCyclesLeft += 12;
+			pushReg16(m_registerNamed.PC + 2);
+			m_registerNamed.PC = tempWord;
+		}
+		break;
 	case 0xC5: m_currentInstructionCyclesLeft = 16; // PUSH BC
 		pushReg16(m_registerNamed.BC);
 		break;
@@ -510,7 +526,12 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0xE5: m_currentInstructionCyclesLeft = 16; // PUSH HL
 		pushReg16(m_registerNamed.HL);
 		break;
-	case 0xE6:  __debugbreak(); break;
+	case 0xE6: m_currentInstructionCyclesLeft = 8; // AND u8
+		m_registerNamed.A &= (this->*m_readByteFunc)(m_registerNamed.PC++);
+		m_registerNamed.F.byte = 0;
+		m_registerNamed.F.zeroFlag = m_registerNamed.A == 0;
+		m_registerNamed.F.halfCarryFlag = 1;
+		break;
 	case 0xE7:  __debugbreak(); break;
 	case 0xE8:  __debugbreak(); break;
 	case 0xE9:  __debugbreak(); break;
@@ -529,7 +550,9 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 		m_registerNamed.AF = popReg16();
 		break;
 	case 0xF2:  __debugbreak(); break;
-	case 0xF3:  __debugbreak(); break;
+	case 0xF3: m_currentInstructionCyclesLeft = 4; // DI
+		// TODO: impelement interrupts!s
+		break;
 	case 0xF4:  __debugbreak(); break;
 	case 0xF5: m_currentInstructionCyclesLeft = 16; // PUSH AF
 		pushReg16(m_registerNamed.AF);
@@ -538,13 +561,15 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0xF7:  __debugbreak(); break;
 	case 0xF8:  __debugbreak(); break;
 	case 0xF9:  __debugbreak(); break;
-	case 0xFA:  __debugbreak(); break;
+	case 0xFA: m_currentInstructionCyclesLeft = 16; // LD A, (u16)
+		m_registerNamed.A = (this->*m_readByteFunc)(getImm16());
+		break;
 	case 0xFB:  __debugbreak(); break;
 	case 0xFC:  __debugbreak(); break;
 	case 0xFD:  __debugbreak(); break;
 	case 0xFE: m_currentInstructionCyclesLeft = 8; // CP u8
 		signedByte = m_registerNamed.A - (this->*m_readByteFunc)(m_registerNamed.PC++);
-		m_registerNamed.F.zeroFlag = (m_registerNamed.A == 0);
+		m_registerNamed.F.zeroFlag = (signedByte == 0);
 		m_registerNamed.F.subtractFlag = 1;
 		m_registerNamed.F.halfCarryFlag = 0; // TODO: calculate halfCarry
 		m_registerNamed.F.carryFlag = (signedByte < 0);
@@ -689,7 +714,7 @@ void CPU::executeInstructionCBPrefix(uint8_t opcode)
 	case 0x7A:  __debugbreak(); break;
 	case 0x7B:  __debugbreak(); break;
 	case 0x7C: // BIT 7, H
-		m_registerNamed.F.zeroFlag = (m_registerNamed.H >> 7) & 1;
+		m_registerNamed.F.zeroFlag = !((m_registerNamed.H >> 7) & 1);
 		m_registerNamed.F.subtractFlag = 0;
 		m_registerNamed.F.halfCarryFlag = 1;
 		break;
