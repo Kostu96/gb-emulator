@@ -37,7 +37,7 @@ public:
 			[&]() {
 				while (true) {
 					std::this_thread::sleep_for(std::chrono::nanoseconds{ 256 }); // TODO: temp
-					m_cpu.doCycles(4);
+					m_cpu.doCycles(8);
 				}
 			} 
 		};
