@@ -17,9 +17,10 @@ private:
 	void executeInstructionStandard(uint8_t opcode);
 	void executeInstructionCBPrefix(uint8_t opcode);
 
-	uint8_t readByte(uint16_t address) const;
-	uint8_t readByteInternal(uint16_t address) const;
+	uint8_t readByte(uint16_t address);
+	uint8_t readByteInternal(uint16_t address);
 	void storeByte(uint16_t address, uint8_t byte);
+	uint8_t getImm8();
 	uint16_t getImm16();
 	uint16_t popReg16();
 	void pushReg16(uint16_t reg);
@@ -30,6 +31,7 @@ private:
 	void INCR(uint8_t& reg);
 	void INCRR(uint16_t& reg);
 	void JR(bool flag);
+	void LDM(uint16_t address, uint8_t value);
 	void LDR(uint8_t& reg, uint8_t value);
 	void LDRR(uint16_t& reg, uint16_t value);
 	void OR(uint8_t value);
@@ -91,7 +93,7 @@ private:
 
 	uint8_t m_interruptControl;
 
-	uint8_t(CPU::* m_readByteFunc)(uint16_t) const;
+	uint8_t(CPU::* m_readByteFunc)(uint16_t);
 	MemoryMap& m_memoryMap;
 
 	// helper variables
