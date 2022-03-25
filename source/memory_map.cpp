@@ -1,14 +1,16 @@
 #include "memory_map.h"
 
 #include <cstdlib>
+#include <iostream>
 
-static AddressRange ROM_RANGE{  0x0000, 0x8000 };
-static AddressRange VRAM_RANGE{ 0x8000, 0x2000 };
-static AddressRange WRAM_RANGE{ 0xC000, 0x2000 };
-static AddressRange OAM_RANGE{  0xFE00, 0x00A0 };
-static AddressRange SPU_RANGE{  0xFF00, 0x0040 };
-static AddressRange PPU_RANGE{  0xFF40, 0x0030 };
-static AddressRange HRAM_RANGE{ 0xFF80, 0x0080 };
+static AddressRange ROM_RANGE{      0x0000, 0x8000 };
+static AddressRange VRAM_RANGE{     0x8000, 0x2000 };
+static AddressRange WRAM_RANGE{     0xC000, 0x2000 };
+static AddressRange OAM_RANGE{      0xFE00, 0x00A0 };
+static AddressRange SPU_RANGE{      0xFF00, 0x0040 };
+static AddressRange PPU_RANGE{      0xFF40, 0x000C };
+static AddressRange RESERVED_RANGE{ 0xFF4C, 0x0033 };
+static AddressRange HRAM_RANGE{     0xFF80, 0x0080 };
 
 MemoryMap::MemoryMap()
 {
@@ -72,6 +74,11 @@ void MemoryMap::store8(uint16_t address, uint8_t byte)
 	if (PPU_RANGE.contains(address, offset)) {
 		m_PPU.store8(offset, byte);
 		return;
+	}
+
+	if (RESERVED_RANGE.contains(address, offset)) {
+		std::cerr << "Unexpected store at location: " << std::hex << address << "\n";
+		return; // TODO: not sure how this range should behave
 	}
 
 	if (HRAM_RANGE.contains(address, offset)) {

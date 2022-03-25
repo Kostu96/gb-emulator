@@ -16,12 +16,28 @@ private:
 	void executeInstruction(uint8_t opcode);
 	void executeInstructionStandard(uint8_t opcode);
 	void executeInstructionCBPrefix(uint8_t opcode);
+
 	uint8_t readByte(uint16_t address) const;
 	uint8_t readByteInternal(uint16_t address) const;
 	void storeByte(uint16_t address, uint8_t byte);
 	uint16_t getImm16();
 	uint16_t popReg16();
 	void pushReg16(uint16_t reg);
+
+	void BIT(uint8_t bit, uint8_t value);
+	void DECR(uint8_t& reg);
+	void DECRR(uint16_t& reg);
+	void INCR(uint8_t& reg);
+	void INCRR(uint16_t& reg);
+	void JR(bool flag);
+	void LDR(uint8_t& reg, uint8_t value);
+	void OR(uint8_t value);
+	void RET(bool flag);
+	void RR(uint8_t& reg);
+	void SETM(uint8_t bit);
+	void SRL(uint8_t& reg);
+	void SUB(uint8_t value);
+	void XOR(uint8_t value);
 
 	union FlagsRegister {
 		struct {

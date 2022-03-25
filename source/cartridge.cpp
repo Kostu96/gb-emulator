@@ -96,6 +96,7 @@ void Cartridge::insert(const char* filename)
 		abort();
 	}
 
+	delete[] m_data;
 	m_data = new uint8_t[m_size];
 	if (!readFile(filename, (char*)m_data, m_size, true)) {
 		std::cerr << "Failed to read cartridge ROM file!\n";

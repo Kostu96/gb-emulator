@@ -11,7 +11,7 @@
 #include <SFML/System/Sleep.hpp>
 #include <thread>
 
-constexpr uint8_t SCALE = 2;
+constexpr uint8_t SCALE = 4;
 static uint32_t palette[4] = { 0xFFFFFFFF, 0xAAAAAAFF, 0x555555FF, 0x000000FF }; // TODO: temp
 
 class GameBoy
@@ -28,7 +28,10 @@ public:
 	{
 		m_window.setVerticalSyncEnabled(true);
 
-		m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/cpu_instrs/cpu_instrs.gb");
+		//m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/cpu_instrs/cpu_instrs.gb");
+		//m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/instr_timing/instr_timing.gb");
+		//m_memoryMap.insertCartridge("assets/test_roms/dmg-acid2.gb");
+		m_memoryMap.insertCartridge("E:/Retro/GameBoy/tetris.gb");
 	}
 
 	void run()
@@ -36,8 +39,8 @@ public:
 		std::thread cpuThread{
 			[&]() {
 				while (true) {
-					std::this_thread::sleep_for(std::chrono::nanoseconds{ 256 }); // TODO: temp
-					m_cpu.doCycles(8);
+					std::this_thread::sleep_for(std::chrono::nanoseconds{ 128 }); // TODO: temp
+					m_cpu.doCycles(16);
 				}
 			} 
 		};

@@ -2,7 +2,7 @@
 
 PPU::PPU()
 {
-	m_VRAM = new uint8_t[VRAM_SIZE];
+	m_VRAM = new uint8_t[VRAM_SIZE]{};
 
 	// helper variables
 	m_currentFrame = 0;
@@ -88,12 +88,10 @@ void PPU::store8OAM(uint16_t address, uint8_t byte)
 
 uint8_t PPU::load8(uint16_t address) const
 {
-	if (address > 12) __debugbreak();
 	return m_rawLCD[address];
 }
 
 void PPU::store8(uint16_t address, uint8_t byte)
 {
-	if (address > 12) __debugbreak();
 	m_rawLCD[address] = byte;
 }
