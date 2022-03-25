@@ -17,29 +17,43 @@ private:
 	void executeInstructionStandard(uint8_t opcode);
 	void executeInstructionCBPrefix(uint8_t opcode);
 
-	uint8_t readByte(uint16_t address);
 	uint8_t readByteInternal(uint16_t address);
+	uint8_t readByte(uint16_t address);
 	void storeByte(uint16_t address, uint8_t byte);
 	uint8_t getImm8();
 	uint16_t getImm16();
 	uint16_t popReg16();
 	void pushReg16(uint16_t reg);
 
+	void ADC(uint8_t value);
+	void ADD(uint8_t value);
+	void ADDHL(uint16_t value);
+	void AND(uint8_t value);
 	void BIT(uint8_t bit, uint8_t value);
+	void CALL(bool flag);
+	void CP(uint8_t value);
+	void DECM(uint16_t address);
 	void DECR(uint8_t& reg);
 	void DECRR(uint16_t& reg);
 	void INCR(uint8_t& reg);
 	void INCRR(uint16_t& reg);
+	void JP(bool flag);
+	void JPHL();
 	void JR(bool flag);
 	void LDM(uint16_t address, uint8_t value);
 	void LDR(uint8_t& reg, uint8_t value);
 	void LDRR(uint16_t& reg, uint16_t value);
 	void OR(uint8_t value);
 	void RET(bool flag);
+	void RL(uint8_t& reg);
+	void RLA();
+	void RLCA();
 	void RR(uint8_t& reg);
+	void RRA();
 	void SETM(uint8_t bit);
 	void SRL(uint8_t& reg);
 	void SUB(uint8_t value);
+	void SWAP(uint8_t& reg);
 	void XOR(uint8_t value);
 
 	union FlagsRegister {
@@ -54,13 +68,6 @@ private:
 	};
 
 	struct RegisterNamed {
-		union {
-			struct {
-				FlagsRegister F;
-				uint8_t A;
-			};
-			uint16_t AF;
-		};
 		union {
 			struct {
 				uint8_t C;
@@ -81,6 +88,13 @@ private:
 				uint8_t H;
 			};
 			uint16_t HL;
+		};
+		union {
+			struct {
+				FlagsRegister F;
+				uint8_t A;
+			};
+			uint16_t AF;
 		};
 		uint16_t SP;
 		uint16_t PC;

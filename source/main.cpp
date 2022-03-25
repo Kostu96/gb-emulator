@@ -18,8 +18,8 @@ class GameBoy
 public:
 	GameBoy() :
 		m_window{
-			sf::VideoMode{ (SCALE * 160) + (2 * SCALE) + (16 * 8 * SCALE),
-			               std::max((SCALE * 144), ( 24 * 8 * SCALE)) },
+			sf::VideoMode{ (SCALE * 160) + (2 * SCALE) + ((15 + 16 * 8) * SCALE),
+			               std::max((SCALE * 144), ((23 + 24 * 8) * SCALE)) },
 			"GameBoy emulator",
 			sf::Style::Close
 		},
@@ -55,18 +55,23 @@ public:
 
 			m_window.clear(sf::Color::Magenta);
 
-			uint32_t xDraw = (SCALE * 160) + (2 * SCALE) + (16 * SCALE);
+			// draw debug screen area:
+			sf::RectangleShape rect{ { 160 * SCALE, 144 * SCALE } };
+			rect.setFillColor(sf::Color::Green);
+			m_window.draw(rect);
+
+			uint32_t xDraw = (SCALE * 160) + (2 * SCALE);
 			uint32_t yDraw = 0;
 			uint16_t address = 0x8000;
 			for (int y = 0; y < 24; y++) {
 				for (int x = 0; x < 16; x++) {
 					drawTile(address, xDraw, yDraw);
-					xDraw += (8 * SCALE);
+					xDraw += (9 * SCALE);
 					address += 16;
 				}
 
-				yDraw += (8 * SCALE);
-				xDraw = (SCALE * 160) + (2 * SCALE) + (16 * SCALE);;
+				yDraw += (9 * SCALE);
+				xDraw = (SCALE * 160) + (2 * SCALE);
 			}
 
 			m_window.display();

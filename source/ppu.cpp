@@ -71,6 +71,8 @@ uint8_t PPU::load8VRAM(uint16_t address) const
 	return m_VRAM[address];
 }
 
+#include <thread>
+
 void PPU::store8VRAM(uint16_t address, uint8_t byte)
 {
 	m_VRAM[address] = byte;
