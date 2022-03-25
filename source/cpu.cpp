@@ -20,20 +20,22 @@ void CPU::reset()
 	// helper variables
 	m_currentInstructionCyclesLeft = 4; // Let's say that reset takes 4 clock cycles
 	m_isCBInstruction = false;
+	m_isHalted = false;
 }
 
 void CPU::doCycles(size_t cycles)
 {
-	while (cycles--) {
-		if (m_currentInstructionCyclesLeft == 0) {
+	if (!m_isHalted)
+		while (cycles--) {
+			if (m_currentInstructionCyclesLeft == 0) {
 
-			uint8_t opcode = getImm8();
-			executeInstruction(opcode);
+				uint8_t opcode = getImm8();
+				executeInstruction(opcode);
+			}
+
+			--m_currentInstructionCyclesLeft;
+			m_memoryMap.getPPU().tick();
 		}
-
-		--m_currentInstructionCyclesLeft;
-		m_memoryMap.getPPU().tick();
-	}
 }
 
 void CPU::executeInstruction(uint8_t opcode)
@@ -251,7 +253,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0xC4: CALL(!m_registerNamed.F.zeroFlag); break;
 	case 0xC5: m_currentInstructionCyclesLeft += 4; pushReg16(m_registerNamed.BC); break;
 	case 0xC6: ADD(getImm8()); break;
-	case 0xC7: __debugbreak(); break;
+	case 0xC7: RST(0x00); break;
 	case 0xC8: RET(m_registerNamed.F.zeroFlag); break;
 	case 0xC9: RET(true); break;
 	case 0xCA:  __debugbreak(); break;
@@ -259,7 +261,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0xCC: __debugbreak(); break;
 	case 0xCD: CALL(true); break;
 	case 0xCE: ADC(getImm8()); break;
-	case 0xCF: __debugbreak(); break;
+	case 0xCF: RST(0x08); break;
 	case 0xD0: RET(!m_registerNamed.F.carryFlag); break;
 	case 0xD1: m_registerNamed.DE = popReg16(); break;
 	case 0xD2: __debugbreak(); break;
@@ -267,7 +269,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0xD4: __debugbreak(); break;
 	case 0xD5: m_currentInstructionCyclesLeft += 4; pushReg16(m_registerNamed.DE); break;
 	case 0xD6: SUB(getImm8()); break;
-	case 0xD7: __debugbreak(); break;
+	case 0xD7: RST(0x10); break;
 	case 0xD8: __debugbreak(); break;
 	case 0xD9: __debugbreak(); break;
 	case 0xDA: __debugbreak(); break;
@@ -275,7 +277,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0xDC: __debugbreak(); break;
 	case 0xDD: __debugbreak(); break;
 	case 0xDE: __debugbreak(); break;
-	case 0xDF: __debugbreak(); break;
+	case 0xDF: RST(0x18); break;
 	case 0xE0: LDM(0xFF00 | getImm8(), m_registerNamed.A); break;
 	case 0xE1: m_registerNamed.HL = popReg16(); break;
 	case 0xE2: LDM(0xFF00 | m_registerNamed.C, m_registerNamed.A); break;
@@ -283,7 +285,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0xE4: __debugbreak(); break;
 	case 0xE5: m_currentInstructionCyclesLeft += 4; pushReg16(m_registerNamed.HL); break;
 	case 0xE6: AND(getImm8()); break;
-	case 0xE7: __debugbreak(); break;
+	case 0xE7: RST(0x20); break;
 	case 0xE8: __debugbreak(); break;
 	case 0xE9: JPHL(); break;
 	case 0xEA: LDM(getImm16(), m_registerNamed.A); break;
@@ -291,23 +293,23 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0xEC: __debugbreak(); break;
 	case 0xED: __debugbreak(); break;
 	case 0xEE: XOR(getImm8()); break;
-	case 0xEF: __debugbreak(); break;
+	case 0xEF: RST(0x28); break;
 	case 0xF0: LDR(m_registerNamed.A, (this->*m_readByteFunc)(0xFF00 | getImm8())); break;
 	case 0xF1: m_registerNamed.AF = popReg16(); break;
 	case 0xF2: __debugbreak(); break;
-	case 0xF3: __debugbreak(); break;
+	case 0xF3: m_interruptsEnabled = false; break;
 	case 0xF4: __debugbreak(); break;
 	case 0xF5: m_currentInstructionCyclesLeft += 4; pushReg16(m_registerNamed.AF); break;
 	case 0xF6: OR(getImm8()); break;
-	case 0xF7: __debugbreak(); break;
+	case 0xF7: RST(0x30); break;
 	case 0xF8: __debugbreak(); break;
 	case 0xF9: LDRR(m_registerNamed.SP, m_registerNamed.HL); break;
 	case 0xFA: LDR(m_registerNamed.A, (this->*m_readByteFunc)(getImm16())); break;
-	case 0xFB: __debugbreak(); break;
+	case 0xFB: m_interruptsEnabled = true; break;
 	case 0xFC: __debugbreak(); break;
 	case 0xFD: __debugbreak(); break;
 	case 0xFE: CP(getImm8()); break;
-	case 0xFF: __debugbreak(); break;
+	case 0xFF: RST(0x38); break;
 	default: __debugbreak();
 	}
 }
@@ -536,7 +538,7 @@ void CPU::executeInstructionCBPrefix(uint8_t opcode)
 	case 0xD6: SETM(2); break;
 	case 0xD7: __debugbreak(); break;
 	case 0xD8: __debugbreak(); break;
-	case 0xD9: __debugbreak(); break;
+	case 0xD9: m_interruptsEnabled = true; RET(true); break;
 	case 0xDA: __debugbreak(); break;
 	case 0xDB: __debugbreak(); break;
 	case 0xDC: __debugbreak(); break;
@@ -850,6 +852,13 @@ void CPU::RRA()
 	m_registerNamed.A >>= 1;
 	m_registerNamed.A |= oldCarry;
 	// m_registerNamed.F.zeroFlag = 0; // TODO: not sure if not affected (Z80 Manual) or reset (pastraiser.com GB opcodes)
+}
+
+void CPU::RST(uint16_t address)
+{
+	m_currentInstructionCyclesLeft += 4;
+	pushReg16(m_registerNamed.PC);
+	m_registerNamed.PC = address;
 }
 
 void CPU::SETM(uint8_t bit)

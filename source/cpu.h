@@ -50,6 +50,7 @@ private:
 	void RLCA();
 	void RR(uint8_t& reg);
 	void RRA();
+	void RST(uint16_t address);
 	void SETM(uint8_t bit);
 	void SRL(uint8_t& reg);
 	void SUB(uint8_t value);
@@ -106,6 +107,7 @@ private:
 	};
 
 	uint8_t m_interruptControl;
+	bool m_interruptsEnabled;
 
 	uint8_t(CPU::* m_readByteFunc)(uint16_t);
 	MemoryMap& m_memoryMap;
@@ -113,4 +115,5 @@ private:
 	// helper variables
 	uint8_t m_currentInstructionCyclesLeft;
 	bool m_isCBInstruction;
+	bool m_isHalted;
 };
