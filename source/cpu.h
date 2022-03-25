@@ -31,6 +31,7 @@ private:
 	void INCRR(uint16_t& reg);
 	void JR(bool flag);
 	void LDR(uint8_t& reg, uint8_t value);
+	void LDRR(uint16_t& reg, uint16_t value);
 	void OR(uint8_t value);
 	void RET(bool flag);
 	void RR(uint8_t& reg);

@@ -1,6 +1,5 @@
 // TODO: debug build with checks and realease build without
 // TODO: unit testing
-// TODO: sfml and gtest build in configure step
 
 #include "cpu.h"
 #include "memory_map.h"
@@ -28,10 +27,10 @@ public:
 	{
 		m_window.setVerticalSyncEnabled(true);
 
-		//m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/cpu_instrs/cpu_instrs.gb");
+		m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/cpu_instrs/cpu_instrs.gb");
 		//m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/instr_timing/instr_timing.gb");
 		//m_memoryMap.insertCartridge("assets/test_roms/dmg-acid2.gb");
-		m_memoryMap.insertCartridge("E:/Retro/GameBoy/tetris.gb");
+		//m_memoryMap.insertCartridge("E:/Retro/GameBoy/tetris.gb");
 	}
 
 	void run()

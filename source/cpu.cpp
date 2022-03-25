@@ -46,19 +46,14 @@ void CPU::executeInstruction(uint8_t opcode)
 
 void CPU::executeInstructionStandard(uint8_t opcode)
 {
-	// TODO: LD reg, reg looks like easly decodable...
-	// TODO: 0x80-0xBF looks easy as well...
-
 	uint16_t tempWord;
 	int8_t signedByte;
 	uint8_t tempBit;
 
 	switch (opcode) {
 	case 0x00: m_currentInstructionCyclesLeft = 4;  break;
-	case 0x01: m_currentInstructionCyclesLeft = 12; // LD BC, u16
-		m_registerNamed.BC = getImm16();
-		break;
-	case 0x02:  m_currentInstructionCyclesLeft = 8; // LD (BC), A
+	case 0x01: LDRR(m_registerNamed.BC, getImm16()); break;
+	case 0x02: m_currentInstructionCyclesLeft = 8; // LD (BC), A
 		storeByte(m_registerNamed.BC, m_registerNamed.A);
 		break;
 	case 0x03: INCRR(m_registerNamed.BC); break;
@@ -79,9 +74,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 		break;
 	case 0x0F:  __debugbreak(); break;
 	case 0x10:  __debugbreak(); break;
-	case 0x11: m_currentInstructionCyclesLeft = 12; // LD DE, u16
-		m_registerNamed.DE = getImm16();
-		break;
+	case 0x11: LDRR(m_registerNamed.DE, getImm16()); break;
 	case 0x12:  m_currentInstructionCyclesLeft = 8; // LD (DE), A
 		storeByte(m_registerNamed.DE, m_registerNamed.A);
 		break;
@@ -97,7 +90,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 		m_registerNamed.A <<= 1;
 		m_registerNamed.A |= tempBit;
 		break;
-	case 0x18: m_currentInstructionCyclesLeft = 8; // JR i8
+	case 0x18: m_currentInstructionCyclesLeft = 8;
 		JR(true);
 		break;
 	case 0x19:  __debugbreak(); break;
@@ -110,15 +103,13 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x1E: m_currentInstructionCyclesLeft = 4;
 		LDR(m_registerNamed.E, (this->*m_readByteFunc)(m_registerNamed.PC++));
 		break;
-	case 0x1F: m_currentInstructionCyclesLeft = 4; // RRA
+	case 0x1F: m_currentInstructionCyclesLeft = 4;
 		RR(m_registerNamed.A);
 		break;
-	case 0x20: m_currentInstructionCyclesLeft = 8; // JR NZ, i8
+	case 0x20: m_currentInstructionCyclesLeft = 8;
 		JR(!m_registerNamed.F.zeroFlag);
 		break;
-	case 0x21: m_currentInstructionCyclesLeft = 12; // LD HL, u16
-		m_registerNamed.HL = getImm16();
-		break;
+	case 0x21: LDRR(m_registerNamed.HL, getImm16()); break;
 	case 0x22: m_currentInstructionCyclesLeft = 8; // LD (HL+), A
 		storeByte(m_registerNamed.HL++, m_registerNamed.A);
 		break;
@@ -129,7 +120,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 		LDR(m_registerNamed.H, (this->*m_readByteFunc)(m_registerNamed.PC++));
 		break;
 	case 0x27:  __debugbreak(); break;
-	case 0x28: m_currentInstructionCyclesLeft = 8; // JR Z, i8
+	case 0x28: m_currentInstructionCyclesLeft = 8;
 		JR(m_registerNamed.F.zeroFlag);
 		break;
 	case 0x29:  __debugbreak(); break;
@@ -143,12 +134,10 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 		LDR(m_registerNamed.L, (this->*m_readByteFunc)(m_registerNamed.PC++));
 		break;
 	case 0x2F:  __debugbreak(); break;
-	case 0x30: m_currentInstructionCyclesLeft = 8; // JR NC, i8
-		JR(!m_registerNamed.F.halfCarryFlag);
+	case 0x30: m_currentInstructionCyclesLeft = 8;
+		JR(!m_registerNamed.F.carryFlag);
 		break;
-	case 0x31: m_currentInstructionCyclesLeft = 12; // LD SP, u16
-		m_registerNamed.SP = getImm16();
-		break;
+	case 0x31: LDRR(m_registerNamed.SP, getImm16()); break;
 	case 0x32: m_currentInstructionCyclesLeft = 8; // LD (HL-), A
 		storeByte(m_registerNamed.HL--, m_registerNamed.A);
 		break;
@@ -195,43 +184,40 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x53: LDR(m_registerNamed.D, m_registerNamed.E); break;
 	case 0x54: LDR(m_registerNamed.D, m_registerNamed.H); break;
 	case 0x55: LDR(m_registerNamed.D, m_registerNamed.L); break;
-		// TODO: finish...
-	case 0x56: m_currentInstructionCyclesLeft = 8; // LD D, (HL)
-		m_registerNamed.D = (this->*m_readByteFunc)(m_registerNamed.HL);
+	case 0x56: m_currentInstructionCyclesLeft = 4;
+		LDR(m_registerNamed.D, (this->*m_readByteFunc)(m_registerNamed.HL));
 		break;
-	case 0x57: m_currentInstructionCyclesLeft = 4; // LD D, A
-		m_registerNamed.D = m_registerNamed.A;
+	case 0x57: LDR(m_registerNamed.A, m_registerNamed.L); break;
+	case 0x58: LDR(m_registerNamed.E, m_registerNamed.B); break;
+	case 0x59: LDR(m_registerNamed.E, m_registerNamed.C); break;
+	case 0x5A: LDR(m_registerNamed.E, m_registerNamed.D); break;
+	case 0x5B: LDR(m_registerNamed.E, m_registerNamed.E); break;
+	case 0x5C: LDR(m_registerNamed.E, m_registerNamed.H); break;
+	case 0x5D: LDR(m_registerNamed.E, m_registerNamed.L); break;
+	case 0x5E: m_currentInstructionCyclesLeft = 4;
+		LDR(m_registerNamed.E, (this->*m_readByteFunc)(m_registerNamed.HL));
 		break;
-	case 0x58:  __debugbreak(); break;
-	case 0x59:  __debugbreak(); break;
-	case 0x5A:  __debugbreak(); break;
-	case 0x5B:  __debugbreak(); break;
-	case 0x5C:  __debugbreak(); break;
-	case 0x5D:  __debugbreak(); break;
-	case 0x5E:  __debugbreak(); break;
-	case 0x5F: m_currentInstructionCyclesLeft = 4; // LD E, A
-		m_registerNamed.E = m_registerNamed.A;
+	case 0x5F: LDR(m_registerNamed.E, m_registerNamed.H); break;
+	case 0x60: LDR(m_registerNamed.H, m_registerNamed.B); break;
+	case 0x61: LDR(m_registerNamed.H, m_registerNamed.C); break;
+	case 0x62: LDR(m_registerNamed.H, m_registerNamed.D); break;
+	case 0x63: LDR(m_registerNamed.H, m_registerNamed.E); break;
+	case 0x64: LDR(m_registerNamed.H, m_registerNamed.H); break;
+	case 0x65: LDR(m_registerNamed.H, m_registerNamed.L); break;
+	case 0x66: m_currentInstructionCyclesLeft = 4;
+		LDR(m_registerNamed.H, (this->*m_readByteFunc)(m_registerNamed.HL));
 		break;
-	case 0x60:  __debugbreak(); break;
-	case 0x61:  __debugbreak(); break;
-	case 0x62:  __debugbreak(); break;
-	case 0x63:  __debugbreak(); break;
-	case 0x64:  __debugbreak(); break;
-	case 0x65:  __debugbreak(); break;
-	case 0x66:  __debugbreak(); break;
-	case 0x67: m_currentInstructionCyclesLeft = 4; // LD H, A
-		m_registerNamed.H = m_registerNamed.A;
+	case 0x67: LDR(m_registerNamed.H, m_registerNamed.A); break;
+	case 0x68: LDR(m_registerNamed.L, m_registerNamed.B); break;
+	case 0x69: LDR(m_registerNamed.L, m_registerNamed.C); break;
+	case 0x6A: LDR(m_registerNamed.L, m_registerNamed.D); break;
+	case 0x6B: LDR(m_registerNamed.L, m_registerNamed.E); break;
+	case 0x6C: LDR(m_registerNamed.L, m_registerNamed.H); break;
+	case 0x6D: LDR(m_registerNamed.L, m_registerNamed.L); break;
+	case 0x6E: m_currentInstructionCyclesLeft = 4;
+		LDR(m_registerNamed.L, (this->*m_readByteFunc)(m_registerNamed.HL));
 		break;
-	case 0x68:  __debugbreak(); break;
-	case 0x69:  __debugbreak(); break;
-	case 0x6A:  __debugbreak(); break;
-	case 0x6B:  __debugbreak(); break;
-	case 0x6C:  __debugbreak(); break;
-	case 0x6D:  __debugbreak(); break;
-	case 0x6E:  __debugbreak(); break;
-	case 0x6F: m_currentInstructionCyclesLeft = 4; // LD L, A
-		m_registerNamed.L = m_registerNamed.A;
-		break;
+	case 0x6F: LDR(m_registerNamed.L, m_registerNamed.A); break;
 	case 0x70: m_currentInstructionCyclesLeft = 8; // LD (HL), B
 		storeByte(m_registerNamed.HL, m_registerNamed.B);
 		break;
@@ -254,28 +240,14 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x77: m_currentInstructionCyclesLeft = 8; // LD (HL), A
 		storeByte(m_registerNamed.HL, m_registerNamed.A);
 		break;
-	case 0x78: m_currentInstructionCyclesLeft = 4; // LD A, B
-		m_registerNamed.A = m_registerNamed.B;
-		break;
-	case 0x79: m_currentInstructionCyclesLeft = 4; // LD A, C
-		m_registerNamed.A = m_registerNamed.C;
-		break;
-	case 0x7A: m_currentInstructionCyclesLeft = 4; // LD A, D
-		m_registerNamed.A = m_registerNamed.D;
-		break;
-	case 0x7B: m_currentInstructionCyclesLeft = 4; // LD A, E
-		m_registerNamed.A = m_registerNamed.E;
-		break;
-	case 0x7C:  m_currentInstructionCyclesLeft = 4; // LD A, H
-		m_registerNamed.A = m_registerNamed.H;
-		break;
-	case 0x7D: m_currentInstructionCyclesLeft = 4; // LD A, L
-		m_registerNamed.A = m_registerNamed.L;
-		break;
-	case 0x7E:  __debugbreak(); break;
-	case 0x7F: m_currentInstructionCyclesLeft = 4; // LD A, A
-		m_registerNamed.A = m_registerNamed.A;
-		break;
+	case 0x78: LDR(m_registerNamed.A, m_registerNamed.B); break;
+	case 0x79: LDR(m_registerNamed.A, m_registerNamed.C); break;
+	case 0x7A: LDR(m_registerNamed.A, m_registerNamed.D); break;
+	case 0x7B: LDR(m_registerNamed.A, m_registerNamed.E); break;
+	case 0x7C: LDR(m_registerNamed.A, m_registerNamed.H); break;
+	case 0x7D: LDR(m_registerNamed.A, m_registerNamed.L); break;
+	case 0x7E: LDR(m_registerNamed.A, (this->*m_readByteFunc)(m_registerNamed.HL)); break;
+	case 0x7F: LDR(m_registerNamed.A, m_registerNamed.A); break;
 	case 0x80:  __debugbreak(); break;
 	case 0x81:  __debugbreak(); break;
 	case 0x82:  __debugbreak(); break;
@@ -461,10 +433,12 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0xEB:  __debugbreak(); break;
 	case 0xEC:  __debugbreak(); break;
 	case 0xED:  __debugbreak(); break;
-	case 0xEE:  __debugbreak(); break;
+	case 0xEE: m_currentInstructionCyclesLeft = 8;
+		XOR((this->*m_readByteFunc)(m_registerNamed.PC++));
+		break;
 	case 0xEF:  __debugbreak(); break;
-	case 0xF0: m_currentInstructionCyclesLeft = 12; // LDH A, (u8)
-		m_registerNamed.A = (this->*m_readByteFunc)(0xFF00 | (this->*m_readByteFunc)(m_registerNamed.PC++));
+	case 0xF0: m_currentInstructionCyclesLeft = 8;
+		LDR(m_registerNamed.A, (this->*m_readByteFunc)(0xFF00 | (this->*m_readByteFunc)(m_registerNamed.PC++)));
 		break;
 	case 0xF1: m_currentInstructionCyclesLeft = 12; // POP AF
 		m_registerNamed.AF = popReg16();
@@ -481,8 +455,8 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0xF7:  __debugbreak(); break;
 	case 0xF8:  __debugbreak(); break;
 	case 0xF9:  __debugbreak(); break;
-	case 0xFA: m_currentInstructionCyclesLeft = 16; // LD A, (u16)
-		m_registerNamed.A = (this->*m_readByteFunc)(getImm16());
+	case 0xFA: m_currentInstructionCyclesLeft = 12;
+		LDR(m_registerNamed.A, (this->*m_readByteFunc)(getImm16()));
 		break;
 	case 0xFB: __debugbreak(); break;
 	case 0xFC:  __debugbreak(); break;
@@ -883,6 +857,12 @@ void CPU::JR(bool flag)
 void CPU::LDR(uint8_t& reg, uint8_t value)
 {
 	m_currentInstructionCyclesLeft += 4;
+	reg = value;
+}
+
+void CPU::LDRR(uint16_t& reg, uint16_t value)
+{
+	m_currentInstructionCyclesLeft = 12;
 	reg = value;
 }
 

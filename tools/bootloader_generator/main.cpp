@@ -1,4 +1,3 @@
-
 #include <cpp-common/helper_functions.h>
 #include <cstdint>
 #include <filesystem>
@@ -45,6 +44,7 @@ int main(int argc, char* argv[])
                 return -1;
             }
 
+            // TODO: reading "nop" would allow to distinguish nops from 0 data
             std::string line;
             uint16_t address;
             while (std::getline(patchFile, line)) {
@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
         uint16_t address = patch.first;
         for (auto byte : patch.second) {
             if (address >= BOOTLOADER_SIZE) {
-                std::cerr << "Failed!\n";
+                std::cerr << "Failed!\n"; // TODO: checking this while loading would give information about which file has an error
                 return -1;
             }
 
@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
     }
     std::cout << "Done.\n";
 
-    std::cout << "Generatgin output file... ";
+    std::cout << "Generating output file... ";
 
     std::ofstream outputFile{ argv[2] };
     if (!outputFile.is_open()) {

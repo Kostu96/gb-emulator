@@ -88,7 +88,7 @@ void Cartridge::insert(const char* filename)
 {
 	if (!readFile(filename, nullptr, m_size, true)) {
 		std::cerr << "Failed to read size of cartridge ROM file!\n";
-		abort();
+		abort(); // TODO: exit more gracefuly
 	}
 
 	if (m_size < 0x8000) {
