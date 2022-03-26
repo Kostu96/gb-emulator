@@ -27,7 +27,8 @@ public:
 	{
 		m_window.setVerticalSyncEnabled(true);
 
-		m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/cpu_instrs/cpu_instrs.gb");
+		//m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/cpu_instrs/cpu_instrs.gb");
+		m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/cpu_instrs/individual/01-special.gb");
 		//m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/instr_timing/instr_timing.gb");
 		//m_memoryMap.insertCartridge("assets/test_roms/dmg-acid2.gb");
 		//m_memoryMap.insertCartridge("E:/Retro/GameBoy/tetris.gb");
@@ -37,9 +38,9 @@ public:
 	{
 		std::thread cpuThread{
 			[&]() {
-				while (true) {
-					std::this_thread::sleep_for(std::chrono::nanoseconds{ 128 }); // TODO: temp
-					m_cpu.doCycles(16);
+				while (m_window.isOpen()) {
+					//std::this_thread::sleep_for(std::chrono::nanoseconds{ 128 }); // TODO: temp
+					m_cpu.doCycles(32);
 				}
 			} 
 		};

@@ -12,20 +12,24 @@ CPU::CPU(MemoryMap& memoryMap) :
 
 void CPU::reset()
 {
-	m_registerNamed.F.byte = 0x0;
-	m_registerNamed.PC = 0x0;
+	F.byte = 0x0;
+	PC = 0x0;
 
-	m_readByteFunc = &CPU::readByteInternal;
+	m_interruptEnables.byte = 0x0;
+	m_IRQs.byte = 0x0;
+	m_interruptsMasterEnable = true;
+	m_EICalled = false;
 
-	// helper variables
 	m_currentInstructionCyclesLeft = 4; // Let's say that reset takes 4 clock cycles
 	m_isCBInstruction = false;
 	m_isHalted = false;
+
+	m_readByteFunc = &CPU::readByteInternal;
 }
 
 void CPU::doCycles(size_t cycles)
 {
-	if (!m_isHalted)
+	if (!m_isHalted) {
 		while (cycles--) {
 			if (m_currentInstructionCyclesLeft == 0) {
 
@@ -36,6 +40,46 @@ void CPU::doCycles(size_t cycles)
 			--m_currentInstructionCyclesLeft;
 			m_memoryMap.getPPU().tick();
 		}
+	}
+	else {
+		if (m_IRQs.byte)
+			m_isHalted = false;
+	}
+
+	// TODO: interrupt should be connected to m_currentInstructionCyclesLeft
+	if (m_interruptsMasterEnable) {
+		// TODO: move this code swh
+		if (m_interruptEnables.fields.VBlank & m_IRQs.fields.VBlank) {
+			m_interruptsMasterEnable = false;
+			m_IRQs.fields.VBlank = 0;
+			RST(0x40);
+		}
+		if (m_interruptEnables.fields.LCDStat & m_IRQs.fields.LCDStat) {
+			m_interruptsMasterEnable = false;
+			m_IRQs.fields.LCDStat = 0;
+			RST(0x48);
+		}
+		if (m_interruptEnables.fields.timer & m_IRQs.fields.timer) {
+			m_interruptsMasterEnable = false;
+			m_IRQs.fields.timer = 0;
+			RST(0x50);
+		}
+		if (m_interruptEnables.fields.serial & m_IRQs.fields.serial) {
+			m_interruptsMasterEnable = false;
+			m_IRQs.fields.serial = 0;
+			RST(0x58);
+		}
+		if (m_interruptEnables.fields.joypad & m_IRQs.fields.joypad) {
+			m_interruptsMasterEnable = false;
+			m_IRQs.fields.joypad = 0;
+			RST(0x60);
+		}
+	}
+
+	if (m_EICalled) {
+		m_interruptsMasterEnable = true;
+		m_EICalled = false;
+	}
 }
 
 void CPU::executeInstruction(uint8_t opcode)
@@ -48,157 +92,154 @@ void CPU::executeInstruction(uint8_t opcode)
 
 void CPU::executeInstructionStandard(uint8_t opcode)
 {
-	uint16_t tempWord;
-	int8_t signedByte;
-	uint8_t tempBit;
 	m_currentInstructionCyclesLeft = 4;
 
 	switch (opcode) {
 	case 0x00: break;
-	case 0x01: LDRR(m_registerNamed.BC, getImm16()); break;
-	case 0x02: LDM(m_registerNamed.BC, m_registerNamed.A); break;
-	case 0x03: INCRR(m_registerNamed.BC); break;
-	case 0x04: INCR(m_registerNamed.B); break;
-	case 0x05: DECR(m_registerNamed.B); break;
-	case 0x06: LDR(m_registerNamed.B, getImm8()); break;
+	case 0x01: LDRR(BC, getImm16()); break;
+	case 0x02: LDM(BC, A); break;
+	case 0x03: INCRR(BC); break;
+	case 0x04: INCR(B); break;
+	case 0x05: DECR(B); break;
+	case 0x06: LDR(B, getImm8()); break;
 	case 0x07: RLCA(); break;
 	case 0x08: __debugbreak(); break;
-	case 0x09: ADDHL(m_registerNamed.BC); break;
+	case 0x09: ADDHL(BC); break;
 	case 0x0A: __debugbreak(); break;
-	case 0x0B: DECRR(m_registerNamed.BC); break;
-	case 0x0C: INCR(m_registerNamed.C); break;
-	case 0x0D: DECR(m_registerNamed.C); break;
-	case 0x0E: LDR(m_registerNamed.C, getImm8()); break;
+	case 0x0B: DECRR(BC); break;
+	case 0x0C: INCR(C); break;
+	case 0x0D: DECR(C); break;
+	case 0x0E: LDR(C, getImm8()); break;
 	case 0x0F: __debugbreak(); break;
 	case 0x10: __debugbreak(); break;
-	case 0x11: LDRR(m_registerNamed.DE, getImm16()); break;
-	case 0x12: LDM(m_registerNamed.DE, m_registerNamed.A); break;
-	case 0x13: INCRR(m_registerNamed.DE); break;
-	case 0x14: INCR(m_registerNamed.D); break;
-	case 0x15: DECR(m_registerNamed.D); break;
-	case 0x16: LDR(m_registerNamed.D, getImm8()); break;
+	case 0x11: LDRR(DE, getImm16()); break;
+	case 0x12: LDM(DE, A); break;
+	case 0x13: INCRR(DE); break;
+	case 0x14: INCR(D); break;
+	case 0x15: DECR(D); break;
+	case 0x16: LDR(D, getImm8()); break;
 	case 0x17: RLA(); break;
 	case 0x18: JR(true); break;
-	case 0x19: ADDHL(m_registerNamed.DE); break;
-	case 0x1A: LDR(m_registerNamed.A, (this->*m_readByteFunc)(m_registerNamed.DE)); break;
+	case 0x19: ADDHL(DE); break;
+	case 0x1A: LDR(A, (this->*m_readByteFunc)(DE)); break;
 	case 0x1B: __debugbreak(); break;
-	case 0x1C: INCR(m_registerNamed.E); break;
-	case 0x1D: DECR(m_registerNamed.E); break;
-	case 0x1E: LDR(m_registerNamed.E, getImm8()); break;
+	case 0x1C: INCR(E); break;
+	case 0x1D: DECR(E); break;
+	case 0x1E: LDR(E, getImm8()); break;
 	case 0x1F: RRA(); break;
-	case 0x20: JR(!m_registerNamed.F.zeroFlag); break;
-	case 0x21: LDRR(m_registerNamed.HL, getImm16()); break;
-	case 0x22: LDM(m_registerNamed.HL++, m_registerNamed.A); break;
-	case 0x23: INCRR(m_registerNamed.HL); break;
-	case 0x24: INCR(m_registerNamed.H); break;
-	case 0x25: DECR(m_registerNamed.H); break;
-	case 0x26: LDR(m_registerNamed.H, getImm8()); break;
+	case 0x20: JR(!F.zeroFlag); break;
+	case 0x21: LDRR(HL, getImm16()); break;
+	case 0x22: LDM(HL++, A); break;
+	case 0x23: INCRR(HL); break;
+	case 0x24: INCR(H); break;
+	case 0x25: DECR(H); break;
+	case 0x26: LDR(H, getImm8()); break;
 	case 0x27: __debugbreak(); break;
-	case 0x28: JR(m_registerNamed.F.zeroFlag); break;
-	case 0x29: ADDHL(m_registerNamed.HL); break;
-	case 0x2A: LDR(m_registerNamed.A, (this->*m_readByteFunc)(m_registerNamed.HL++)); break;
+	case 0x28: JR(F.zeroFlag); break;
+	case 0x29: ADDHL(HL); break;
+	case 0x2A: LDR(A, (this->*m_readByteFunc)(HL++)); break;
 	case 0x2B: __debugbreak(); break;
-	case 0x2C: INCR(m_registerNamed.L); break;
-	case 0x2D: DECR(m_registerNamed.L); break;
-	case 0x2E: LDR(m_registerNamed.L, getImm8()); break;
+	case 0x2C: INCR(L); break;
+	case 0x2D: DECR(L); break;
+	case 0x2E: LDR(L, getImm8()); break;
 	case 0x2F: __debugbreak(); break;
-	case 0x30: JR(!m_registerNamed.F.carryFlag); break;
-	case 0x31: LDRR(m_registerNamed.SP, getImm16()); break;
-	case 0x32: LDM(m_registerNamed.HL--, m_registerNamed.A); break;
-	case 0x33: INCRR(m_registerNamed.SP); break;
+	case 0x30: JR(!F.carryFlag); break;
+	case 0x31: LDRR(SP, getImm16()); break;
+	case 0x32: LDM(HL--, A); break;
+	case 0x33: INCRR(SP); break;
 	case 0x34: __debugbreak(); break;
-	case 0x35: DECM(m_registerNamed.HL); break;
-	case 0x36: LDM(m_registerNamed.HL, getImm8()); break;
+	case 0x35: DECM(HL); break;
+	case 0x36: LDM(HL, getImm8()); break;
 	case 0x37: __debugbreak(); break;
-	case 0x38: __debugbreak(); break;
-	case 0x39: ADDHL(m_registerNamed.SP); break;
+	case 0x38: JR(F.carryFlag); break;
+	case 0x39: ADDHL(SP); break;
 	case 0x3A: __debugbreak(); break;
 	case 0x3B: __debugbreak(); break;
-	case 0x3C: INCR(m_registerNamed.A); break;
-	case 0x3D: DECR(m_registerNamed.A); break;
-	case 0x3E: LDR(m_registerNamed.A, getImm8()); break;
+	case 0x3C: INCR(A); break;
+	case 0x3D: DECR(A); break;
+	case 0x3E: LDR(A, getImm8()); break;
 	case 0x3F: __debugbreak(); break;
-	case 0x40: LDR(m_registerNamed.B, m_registerNamed.B); break;
-	case 0x41: LDR(m_registerNamed.B, m_registerNamed.C); break;
-	case 0x42: LDR(m_registerNamed.B, m_registerNamed.D); break;
-	case 0x43: LDR(m_registerNamed.B, m_registerNamed.E); break;
-	case 0x44: LDR(m_registerNamed.B, m_registerNamed.H); break;
-	case 0x45: LDR(m_registerNamed.B, m_registerNamed.L); break;
-	case 0x46: LDR(m_registerNamed.B, (this->*m_readByteFunc)(m_registerNamed.HL)); break;
-	case 0x47: LDR(m_registerNamed.B, m_registerNamed.A); break;
-	case 0x48: LDR(m_registerNamed.C, m_registerNamed.B); break;
-	case 0x49: LDR(m_registerNamed.C, m_registerNamed.C); break;
-	case 0x4A: LDR(m_registerNamed.C, m_registerNamed.D); break;
-	case 0x4B: LDR(m_registerNamed.C, m_registerNamed.E); break;
-	case 0x4C: LDR(m_registerNamed.C, m_registerNamed.H); break;
-	case 0x4D: LDR(m_registerNamed.C, m_registerNamed.L); break;
-	case 0x4E: LDR(m_registerNamed.C, (this->*m_readByteFunc)(m_registerNamed.HL)); break;
-	case 0x4F: LDR(m_registerNamed.C, m_registerNamed.A); break;
-	case 0x50: LDR(m_registerNamed.D, m_registerNamed.B); break;
-	case 0x51: LDR(m_registerNamed.D, m_registerNamed.C); break;
-	case 0x52: LDR(m_registerNamed.D, m_registerNamed.D); break;
-	case 0x53: LDR(m_registerNamed.D, m_registerNamed.E); break;
-	case 0x54: LDR(m_registerNamed.D, m_registerNamed.H); break;
-	case 0x55: LDR(m_registerNamed.D, m_registerNamed.L); break;
-	case 0x56: LDR(m_registerNamed.D, (this->*m_readByteFunc)(m_registerNamed.HL)); break;
-	case 0x57: LDR(m_registerNamed.A, m_registerNamed.L); break;
-	case 0x58: LDR(m_registerNamed.E, m_registerNamed.B); break;
-	case 0x59: LDR(m_registerNamed.E, m_registerNamed.C); break;
-	case 0x5A: LDR(m_registerNamed.E, m_registerNamed.D); break;
-	case 0x5B: LDR(m_registerNamed.E, m_registerNamed.E); break;
-	case 0x5C: LDR(m_registerNamed.E, m_registerNamed.H); break;
-	case 0x5D: LDR(m_registerNamed.E, m_registerNamed.L); break;
-	case 0x5E: LDR(m_registerNamed.E, (this->*m_readByteFunc)(m_registerNamed.HL)); break;
-	case 0x5F: LDR(m_registerNamed.E, m_registerNamed.H); break;
-	case 0x60: LDR(m_registerNamed.H, m_registerNamed.B); break;
-	case 0x61: LDR(m_registerNamed.H, m_registerNamed.C); break;
-	case 0x62: LDR(m_registerNamed.H, m_registerNamed.D); break;
-	case 0x63: LDR(m_registerNamed.H, m_registerNamed.E); break;
-	case 0x64: LDR(m_registerNamed.H, m_registerNamed.H); break;
-	case 0x65: LDR(m_registerNamed.H, m_registerNamed.L); break;
-	case 0x66: LDR(m_registerNamed.H, (this->*m_readByteFunc)(m_registerNamed.HL)); break;
-	case 0x67: LDR(m_registerNamed.H, m_registerNamed.A); break;
-	case 0x68: LDR(m_registerNamed.L, m_registerNamed.B); break;
-	case 0x69: LDR(m_registerNamed.L, m_registerNamed.C); break;
-	case 0x6A: LDR(m_registerNamed.L, m_registerNamed.D); break;
-	case 0x6B: LDR(m_registerNamed.L, m_registerNamed.E); break;
-	case 0x6C: LDR(m_registerNamed.L, m_registerNamed.H); break;
-	case 0x6D: LDR(m_registerNamed.L, m_registerNamed.L); break;
-	case 0x6E: LDR(m_registerNamed.L, (this->*m_readByteFunc)(m_registerNamed.HL)); break;
-	case 0x6F: LDR(m_registerNamed.L, m_registerNamed.A); break;
-	case 0x70: LDM(m_registerNamed.HL, m_registerNamed.B); break;
-	case 0x71: LDM(m_registerNamed.HL, m_registerNamed.C); break;
-	case 0x72: LDM(m_registerNamed.HL, m_registerNamed.D); break;
-	case 0x73: LDM(m_registerNamed.HL, m_registerNamed.E); break;
-	case 0x74: LDM(m_registerNamed.HL, m_registerNamed.H); break;
-	case 0x75: LDM(m_registerNamed.HL, m_registerNamed.L); break;
-	case 0x76: __debugbreak(); break;
-	case 0x77: LDM(m_registerNamed.HL, m_registerNamed.A); break;
-	case 0x78: LDR(m_registerNamed.A, m_registerNamed.B); break;
-	case 0x79: LDR(m_registerNamed.A, m_registerNamed.C); break;
-	case 0x7A: LDR(m_registerNamed.A, m_registerNamed.D); break;
-	case 0x7B: LDR(m_registerNamed.A, m_registerNamed.E); break;
-	case 0x7C: LDR(m_registerNamed.A, m_registerNamed.H); break;
-	case 0x7D: LDR(m_registerNamed.A, m_registerNamed.L); break;
-	case 0x7E: LDR(m_registerNamed.A, (this->*m_readByteFunc)(m_registerNamed.HL)); break;
-	case 0x7F: LDR(m_registerNamed.A, m_registerNamed.A); break;
+	case 0x40: LDR(B, B); break;
+	case 0x41: LDR(B, C); break;
+	case 0x42: LDR(B, D); break;
+	case 0x43: LDR(B, E); break;
+	case 0x44: LDR(B, H); break;
+	case 0x45: LDR(B, L); break;
+	case 0x46: LDR(B, (this->*m_readByteFunc)(HL)); break;
+	case 0x47: LDR(B, A); break;
+	case 0x48: LDR(C, B); break;
+	case 0x49: LDR(C, C); break;
+	case 0x4A: LDR(C, D); break;
+	case 0x4B: LDR(C, E); break;
+	case 0x4C: LDR(C, H); break;
+	case 0x4D: LDR(C, L); break;
+	case 0x4E: LDR(C, (this->*m_readByteFunc)(HL)); break;
+	case 0x4F: LDR(C, A); break;
+	case 0x50: LDR(D, B); break;
+	case 0x51: LDR(D, C); break;
+	case 0x52: LDR(D, D); break;
+	case 0x53: LDR(D, E); break;
+	case 0x54: LDR(D, H); break;
+	case 0x55: LDR(D, L); break;
+	case 0x56: LDR(D, (this->*m_readByteFunc)(HL)); break;
+	case 0x57: LDR(A, L); break;
+	case 0x58: LDR(E, B); break;
+	case 0x59: LDR(E, C); break;
+	case 0x5A: LDR(E, D); break;
+	case 0x5B: LDR(E, E); break;
+	case 0x5C: LDR(E, H); break;
+	case 0x5D: LDR(E, L); break;
+	case 0x5E: LDR(E, (this->*m_readByteFunc)(HL)); break;
+	case 0x5F: LDR(E, H); break;
+	case 0x60: LDR(H, B); break;
+	case 0x61: LDR(H, C); break;
+	case 0x62: LDR(H, D); break;
+	case 0x63: LDR(H, E); break;
+	case 0x64: LDR(H, H); break;
+	case 0x65: LDR(H, L); break;
+	case 0x66: LDR(H, (this->*m_readByteFunc)(HL)); break;
+	case 0x67: LDR(H, A); break;
+	case 0x68: LDR(L, B); break;
+	case 0x69: LDR(L, C); break;
+	case 0x6A: LDR(L, D); break;
+	case 0x6B: LDR(L, E); break;
+	case 0x6C: LDR(L, H); break;
+	case 0x6D: LDR(L, L); break;
+	case 0x6E: LDR(L, (this->*m_readByteFunc)(HL)); break;
+	case 0x6F: LDR(L, A); break;
+	case 0x70: LDM(HL, B); break;
+	case 0x71: LDM(HL, C); break;
+	case 0x72: LDM(HL, D); break;
+	case 0x73: LDM(HL, E); break;
+	case 0x74: LDM(HL, H); break;
+	case 0x75: LDM(HL, L); break;
+	case 0x76: m_isHalted = true; break;
+	case 0x77: LDM(HL, A); break;
+	case 0x78: LDR(A, B); break;
+	case 0x79: LDR(A, C); break;
+	case 0x7A: LDR(A, D); break;
+	case 0x7B: LDR(A, E); break;
+	case 0x7C: LDR(A, H); break;
+	case 0x7D: LDR(A, L); break;
+	case 0x7E: LDR(A, (this->*m_readByteFunc)(HL)); break;
+	case 0x7F: LDR(A, A); break;
 	case 0x80: __debugbreak(); break;
 	case 0x81: __debugbreak(); break;
-	case 0x82: ADD(m_registerNamed.D); break;
+	case 0x82: ADD(D); break;
 	case 0x83: __debugbreak(); break;
 	case 0x84: __debugbreak(); break;
 	case 0x85: __debugbreak(); break;
-	case 0x86: ADD((this->*m_readByteFunc)(m_registerNamed.HL)); break;
+	case 0x86: ADD((this->*m_readByteFunc)(HL)); break;
 	case 0x87: __debugbreak(); break;
 	case 0x88: __debugbreak(); break;
 	case 0x89: __debugbreak(); break;
 	case 0x8A: __debugbreak(); break;
 	case 0x8B: __debugbreak(); break;
 	case 0x8C: __debugbreak(); break;
-	case 0x8D: ADC(m_registerNamed.L); break;
+	case 0x8D: ADC(L); break;
 	case 0x8E: __debugbreak(); break;
 	case 0x8F: __debugbreak(); break;
-	case 0x90: SUB(m_registerNamed.B); break;
+	case 0x90: SUB(B); break;
 	case 0x91: __debugbreak(); break;
 	case 0x92: __debugbreak(); break;
 	case 0x93: __debugbreak(); break;
@@ -222,39 +263,39 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0xA5: __debugbreak(); break;
 	case 0xA6: __debugbreak(); break;
 	case 0xA7: __debugbreak(); break;
-	case 0xA8: XOR(m_registerNamed.B); break;
-	case 0xA9: XOR(m_registerNamed.C); break;
-	case 0xAA: XOR(m_registerNamed.D); break;
-	case 0xAB: XOR(m_registerNamed.E); break;
-	case 0xAC: XOR(m_registerNamed.H); break;
-	case 0xAD: XOR(m_registerNamed.L); break;
-	case 0xAE: XOR((this->*m_readByteFunc)(m_registerNamed.HL)); break;
-	case 0xAF: XOR(m_registerNamed.A); break;
-	case 0xB0: OR(m_registerNamed.B); break;
-	case 0xB1: OR(m_registerNamed.C); break;
-	case 0xB2: OR(m_registerNamed.D); break;
-	case 0xB3: OR(m_registerNamed.E); break;
-	case 0xB4: OR(m_registerNamed.H); break;
-	case 0xB5: OR(m_registerNamed.L); break;
-	case 0xB6: OR((this->*m_readByteFunc)(m_registerNamed.HL)); break;
-	case 0xB7: OR(m_registerNamed.A); break;
-	case 0xB8: __debugbreak(); break;
-	case 0xB9: __debugbreak(); break;
-	case 0xBA: __debugbreak(); break;
-	case 0xBB: __debugbreak(); break;
-	case 0xBC: __debugbreak(); break;
-	case 0xBD: __debugbreak(); break;
-	case 0xBE: CP((this->*m_readByteFunc)(m_registerNamed.HL)); break;
-	case 0xBF: __debugbreak(); break;
-	case 0xC0: __debugbreak(); break;
-	case 0xC1: m_registerNamed.BC = popReg16(); break;
-	case 0xC2: JP(!m_registerNamed.F.zeroFlag); break;
+	case 0xA8: XOR(B); break;
+	case 0xA9: XOR(C); break;
+	case 0xAA: XOR(D); break;
+	case 0xAB: XOR(E); break;
+	case 0xAC: XOR(H); break;
+	case 0xAD: XOR(L); break;
+	case 0xAE: XOR((this->*m_readByteFunc)(HL)); break;
+	case 0xAF: XOR(A); break;
+	case 0xB0: OR(B); break;
+	case 0xB1: OR(C); break;
+	case 0xB2: OR(D); break;
+	case 0xB3: OR(E); break;
+	case 0xB4: OR(H); break;
+	case 0xB5: OR(L); break;
+	case 0xB6: OR((this->*m_readByteFunc)(HL)); break;
+	case 0xB7: OR(A); break;
+	case 0xB8: CP(B); break;
+	case 0xB9: CP(C); break;
+	case 0xBA: CP(D); break;
+	case 0xBB: CP(E); break;
+	case 0xBC: CP(H); break;
+	case 0xBD: CP(L); break;
+	case 0xBE: CP((this->*m_readByteFunc)(HL)); break;
+	case 0xBF: CP(A); break;
+	case 0xC0: RET(!F.zeroFlag); break;
+	case 0xC1: BC = popReg16(); break;
+	case 0xC2: JP(!F.zeroFlag); break;
 	case 0xC3: JP(true); break;
-	case 0xC4: CALL(!m_registerNamed.F.zeroFlag); break;
-	case 0xC5: m_currentInstructionCyclesLeft += 4; pushReg16(m_registerNamed.BC); break;
+	case 0xC4: CALL(!F.zeroFlag); break;
+	case 0xC5: m_currentInstructionCyclesLeft += 4; pushReg16(BC); break;
 	case 0xC6: ADD(getImm8()); break;
 	case 0xC7: RST(0x00); break;
-	case 0xC8: RET(m_registerNamed.F.zeroFlag); break;
+	case 0xC8: RET(F.zeroFlag); break;
 	case 0xC9: RET(true); break;
 	case 0xCA:  __debugbreak(); break;
 	case 0xCB: m_isCBInstruction = true; break;
@@ -262,50 +303,50 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0xCD: CALL(true); break;
 	case 0xCE: ADC(getImm8()); break;
 	case 0xCF: RST(0x08); break;
-	case 0xD0: RET(!m_registerNamed.F.carryFlag); break;
-	case 0xD1: m_registerNamed.DE = popReg16(); break;
+	case 0xD0: RET(!F.carryFlag); break;
+	case 0xD1: DE = popReg16(); break;
 	case 0xD2: __debugbreak(); break;
 	case 0xD3: __debugbreak(); break;
 	case 0xD4: __debugbreak(); break;
-	case 0xD5: m_currentInstructionCyclesLeft += 4; pushReg16(m_registerNamed.DE); break;
+	case 0xD5: m_currentInstructionCyclesLeft += 4; pushReg16(DE); break;
 	case 0xD6: SUB(getImm8()); break;
 	case 0xD7: RST(0x10); break;
-	case 0xD8: __debugbreak(); break;
-	case 0xD9: __debugbreak(); break;
+	case 0xD8: RET(F.carryFlag); break;
+	case 0xD9: m_EICalled = true; RET(true); break;
 	case 0xDA: __debugbreak(); break;
 	case 0xDB: __debugbreak(); break;
 	case 0xDC: __debugbreak(); break;
 	case 0xDD: __debugbreak(); break;
 	case 0xDE: __debugbreak(); break;
 	case 0xDF: RST(0x18); break;
-	case 0xE0: LDM(0xFF00 | getImm8(), m_registerNamed.A); break;
-	case 0xE1: m_registerNamed.HL = popReg16(); break;
-	case 0xE2: LDM(0xFF00 | m_registerNamed.C, m_registerNamed.A); break;
+	case 0xE0: LDM(0xFF00 | getImm8(), A); break;
+	case 0xE1: HL = popReg16(); break;
+	case 0xE2: LDM(0xFF00 | C, A); break;
 	case 0xE3: __debugbreak(); break;
 	case 0xE4: __debugbreak(); break;
-	case 0xE5: m_currentInstructionCyclesLeft += 4; pushReg16(m_registerNamed.HL); break;
+	case 0xE5: m_currentInstructionCyclesLeft += 4; pushReg16(HL); break;
 	case 0xE6: AND(getImm8()); break;
 	case 0xE7: RST(0x20); break;
 	case 0xE8: __debugbreak(); break;
 	case 0xE9: JPHL(); break;
-	case 0xEA: LDM(getImm16(), m_registerNamed.A); break;
+	case 0xEA: LDM(getImm16(), A); break;
 	case 0xEB: __debugbreak(); break;
 	case 0xEC: __debugbreak(); break;
 	case 0xED: __debugbreak(); break;
 	case 0xEE: XOR(getImm8()); break;
 	case 0xEF: RST(0x28); break;
-	case 0xF0: LDR(m_registerNamed.A, (this->*m_readByteFunc)(0xFF00 | getImm8())); break;
-	case 0xF1: m_registerNamed.AF = popReg16(); break;
+	case 0xF0: LDR(A, (this->*m_readByteFunc)(0xFF00 | getImm8())); break;
+	case 0xF1: AF = popReg16(); F.alwaysZero = 0; break;
 	case 0xF2: __debugbreak(); break;
-	case 0xF3: m_interruptsEnabled = false; break;
+	case 0xF3: m_interruptsMasterEnable = false; break;
 	case 0xF4: __debugbreak(); break;
-	case 0xF5: m_currentInstructionCyclesLeft += 4; pushReg16(m_registerNamed.AF); break;
+	case 0xF5: m_currentInstructionCyclesLeft += 4; pushReg16(AF); break;
 	case 0xF6: OR(getImm8()); break;
 	case 0xF7: RST(0x30); break;
 	case 0xF8: __debugbreak(); break;
-	case 0xF9: LDRR(m_registerNamed.SP, m_registerNamed.HL); break;
-	case 0xFA: LDR(m_registerNamed.A, (this->*m_readByteFunc)(getImm16())); break;
-	case 0xFB: m_interruptsEnabled = true; break;
+	case 0xF9: LDRR(SP, HL); break;
+	case 0xFA: LDR(A, (this->*m_readByteFunc)(getImm16())); break;
+	case 0xFB: m_EICalled = true; break;
 	case 0xFC: __debugbreak(); break;
 	case 0xFD: __debugbreak(); break;
 	case 0xFE: CP(getImm8()); break;
@@ -338,21 +379,21 @@ void CPU::executeInstructionCBPrefix(uint8_t opcode)
 	case 0x0E: __debugbreak(); break;
 	case 0x0F: __debugbreak(); break;
 	case 0x10: __debugbreak(); break;
-	case 0x11: RL(m_registerNamed.C); break;
+	case 0x11: RL(C); break;
 	case 0x12: __debugbreak(); break;
 	case 0x13: __debugbreak(); break;
 	case 0x14: __debugbreak(); break;
 	case 0x15: __debugbreak(); break;
 	case 0x16: __debugbreak(); break;
 	case 0x17: __debugbreak(); break;
-	case 0x18: RR(m_registerNamed.B); break;
-	case 0x19: RR(m_registerNamed.C); break;
-	case 0x1A: RR(m_registerNamed.D); break;
-	case 0x1B: RR(m_registerNamed.E); break;
-	case 0x1C: RR(m_registerNamed.H); break;
-	case 0x1D: RR(m_registerNamed.L); break;
+	case 0x18: RR(B); break;
+	case 0x19: RR(C); break;
+	case 0x1A: RR(D); break;
+	case 0x1B: RR(E); break;
+	case 0x1C: RR(H); break;
+	case 0x1D: RR(L); break;
 	case 0x1E: __debugbreak(); break;
-	case 0x1F: RR(m_registerNamed.A); break;
+	case 0x1F: RR(A); break;
 	case 0x20: __debugbreak(); break;
 	case 0x21: __debugbreak(); break;
 	case 0x22: __debugbreak(); break;
@@ -369,22 +410,22 @@ void CPU::executeInstructionCBPrefix(uint8_t opcode)
 	case 0x2D: __debugbreak(); break;
 	case 0x2E: __debugbreak(); break;
 	case 0x2F: __debugbreak(); break;
-	case 0x30: SWAP(m_registerNamed.B); break;
-	case 0x31: SWAP(m_registerNamed.C); break;
-	case 0x32: SWAP(m_registerNamed.D); break;
-	case 0x33: SWAP(m_registerNamed.E); break;
-	case 0x34: SWAP(m_registerNamed.H); break;
-	case 0x35: SWAP(m_registerNamed.L); break;
+	case 0x30: SWAP(B); break;
+	case 0x31: SWAP(C); break;
+	case 0x32: SWAP(D); break;
+	case 0x33: SWAP(E); break;
+	case 0x34: SWAP(H); break;
+	case 0x35: SWAP(L); break;
 	case 0x36: __debugbreak(); break;
-	case 0x37: SWAP(m_registerNamed.A); break;
-	case 0x38: SRL(m_registerNamed.B); break;
-	case 0x39: SRL(m_registerNamed.C); break;
-	case 0x3A: SRL(m_registerNamed.D); break;
-	case 0x3B: SRL(m_registerNamed.E); break;
-	case 0x3C: SRL(m_registerNamed.H); break;
-	case 0x3D: SRL(m_registerNamed.L); break;
+	case 0x37: SWAP(A); break;
+	case 0x38: SRL(B); break;
+	case 0x39: SRL(C); break;
+	case 0x3A: SRL(D); break;
+	case 0x3B: SRL(E); break;
+	case 0x3C: SRL(H); break;
+	case 0x3D: SRL(L); break;
 	case 0x3E: __debugbreak(); break;
-	case 0x3F: SRL(m_registerNamed.A); break;
+	case 0x3F: SRL(A); break;
 	case 0x40: __debugbreak(); break;
 	case 0x41: __debugbreak(); break;
 	case 0x42: __debugbreak(); break;
@@ -441,13 +482,13 @@ void CPU::executeInstructionCBPrefix(uint8_t opcode)
 	case 0x75: __debugbreak(); break;
 	case 0x76: __debugbreak(); break;
 	case 0x77: __debugbreak(); break;
-	case 0x78: BIT(7, m_registerNamed.B); break;
-	case 0x79: BIT(7, m_registerNamed.C); break;
-	case 0x7A: BIT(7, m_registerNamed.D); break;
-	case 0x7B: BIT(7, m_registerNamed.E); break;
-	case 0x7C: BIT(7, m_registerNamed.H); break;
-	case 0x7D: BIT(7, m_registerNamed.L); break;
-	case 0x7E: m_currentInstructionCyclesLeft += 4; BIT(7, (this->*m_readByteFunc)(m_registerNamed.HL)); break;
+	case 0x78: BIT(7, B); break;
+	case 0x79: BIT(7, C); break;
+	case 0x7A: BIT(7, D); break;
+	case 0x7B: BIT(7, E); break;
+	case 0x7C: BIT(7, H); break;
+	case 0x7D: BIT(7, L); break;
+	case 0x7E: m_currentInstructionCyclesLeft += 4; BIT(7, (this->*m_readByteFunc)(HL)); break;
 	case 0x7F: __debugbreak(); break;
 	case 0x80: __debugbreak(); break;
 	case 0x81: __debugbreak(); break;
@@ -538,7 +579,7 @@ void CPU::executeInstructionCBPrefix(uint8_t opcode)
 	case 0xD6: SETM(2); break;
 	case 0xD7: __debugbreak(); break;
 	case 0xD8: __debugbreak(); break;
-	case 0xD9: m_interruptsEnabled = true; RET(true); break;
+	case 0xD9: __debugbreak(); break;
 	case 0xDA: __debugbreak(); break;
 	case 0xDB: __debugbreak(); break;
 	case 0xDC: __debugbreak(); break;
@@ -577,6 +618,7 @@ void CPU::executeInstructionCBPrefix(uint8_t opcode)
 	case 0xFD: __debugbreak(); break;
 	case 0xFE: SETM(7); break;
 	case 0xFF: __debugbreak(); break;
+	default: __debugbreak();
 	}
 }
 
@@ -594,10 +636,14 @@ uint8_t CPU::readByte(uint16_t address)
 {
 	m_currentInstructionCyclesLeft += 4;
 
-	if (address == 0xFFFF)
-		return m_interruptControl;
-
-	return m_memoryMap.load8(address);
+	switch (address) {
+	case 0xFF0F:
+		return m_IRQs.byte;
+	case 0xFFFF:
+		return m_interruptEnables.byte;
+	default:
+		return m_memoryMap.load8(address);
+	}
 }
 
 void CPU::storeByte(uint16_t address, uint8_t byte)
@@ -608,8 +654,11 @@ void CPU::storeByte(uint16_t address, uint8_t byte)
 	case 0xFF50:
 		m_readByteFunc = &CPU::readByte;
 		break;
+	case 0xFF0F:
+		m_IRQs.byte = byte;
+		break;
 	case 0xFFFF:
-		m_interruptControl = byte;
+		m_interruptEnables.byte = byte;
 		break;
 	default:
 		m_memoryMap.store8(address, byte);
@@ -618,83 +667,83 @@ void CPU::storeByte(uint16_t address, uint8_t byte)
 
 uint8_t CPU::getImm8()
 {
-	return (this->*m_readByteFunc)(m_registerNamed.PC++);
+	return (this->*m_readByteFunc)(PC++);
 }
 
 uint16_t CPU::getImm16()
 {
-	uint16_t value = (this->*m_readByteFunc)(m_registerNamed.PC + 1);
+	uint16_t value = (this->*m_readByteFunc)(PC + 1);
 	value <<= 8;
-	value |= (this->*m_readByteFunc)(m_registerNamed.PC);
-	m_registerNamed.PC += 2;
+	value |= (this->*m_readByteFunc)(PC);
+	PC += 2;
 	
 	return value;
 }
 
 uint16_t CPU::popReg16()
 {
-	uint16_t value = (this->*m_readByteFunc)(m_registerNamed.SP + 1);
+	uint16_t value = (this->*m_readByteFunc)(SP + 1);
 	value <<= 8;
-	value |= (this->*m_readByteFunc)(m_registerNamed.SP);
-	m_registerNamed.SP += 2;
+	value |= (this->*m_readByteFunc)(SP);
+	SP += 2;
 	
 	return value;
 }
 
 void CPU::pushReg16(uint16_t reg)
 {
-	m_registerNamed.SP -= 2;
-	storeByte(m_registerNamed.SP, reg & 0xFF);
-	storeByte(m_registerNamed.SP + 1, (reg >> 8) & 0xFF);
+	SP -= 2;
+	storeByte(SP, reg & 0xFF);
+	storeByte(SP + 1, (reg >> 8) & 0xFF);
 }
 
 void CPU::ADC(uint8_t value)
 {
-	uint16_t result = m_registerNamed.A + value + m_registerNamed.F.carryFlag;
-	uint8_t result4bit = (m_registerNamed.A & 0xF) + (value & 0xF) + m_registerNamed.F.carryFlag;
-	m_registerNamed.A = result;
-	m_registerNamed.F.zeroFlag = (m_registerNamed.A == 0);
-	m_registerNamed.F.subtractFlag = 0;
-	m_registerNamed.F.halfCarryFlag = result4bit >> 4;
-	m_registerNamed.F.carryFlag = result >> 8;
+	uint16_t result = A + value + F.carryFlag;
+	uint8_t result4bit = (A & 0xF) + (value & 0xF) + F.carryFlag;
+	A = result;
+	F.zeroFlag = (A == 0);
+	F.subtractFlag = 0;
+	F.halfCarryFlag = result4bit >> 4;
+	F.carryFlag = result >> 8;
 }
 
 void CPU::ADD(uint8_t value)
 {
-	uint16_t result = m_registerNamed.A + value;
-	uint8_t result4bit = (m_registerNamed.A & 0xF) + (value & 0xF);
-	m_registerNamed.A = result;
-	m_registerNamed.F.zeroFlag = (m_registerNamed.A == 0);
-	m_registerNamed.F.subtractFlag = 0;
-	m_registerNamed.F.halfCarryFlag = result4bit >> 4;
-	m_registerNamed.F.carryFlag = result >> 8;
+	uint16_t result = A + value;
+	uint8_t result4bit = (A & 0xF) + (value & 0xF);
+	A = result;
+	F.zeroFlag = (A == 0);
+	F.subtractFlag = 0;
+	F.halfCarryFlag = result4bit >> 4;
+	F.carryFlag = result >> 8;
 }
 
 void CPU::ADDHL(uint16_t value)
 {
 	m_currentInstructionCyclesLeft += 4;
-	uint32_t result = m_registerNamed.HL + value;
-	uint16_t result12bit = (m_registerNamed.A & 0xFFF) + (value & 0xFFF);
-	m_registerNamed.HL = result;
-	m_registerNamed.F.zeroFlag = (m_registerNamed.HL == 0); // TODO: different specs
-	m_registerNamed.F.subtractFlag = 0;
-	m_registerNamed.F.halfCarryFlag = result12bit >> 12;
-	m_registerNamed.F.carryFlag = result >> 16;
+	uint32_t result = HL + value;
+	uint16_t result12bit = (A & 0xFFF) + (value & 0xFFF);
+	HL = result;
+	F.zeroFlag = (HL == 0); // TODO: different specs
+	F.subtractFlag = 0;
+	F.halfCarryFlag = result12bit >> 12;
+	F.carryFlag = result >> 16;
 }
 
 void CPU::AND(uint8_t value)
 {
-	m_registerNamed.A &= value;
-	m_registerNamed.F.byte = 0;
-	m_registerNamed.F.zeroFlag = m_registerNamed.A == 0;
-	m_registerNamed.F.halfCarryFlag = 1;
+	A &= value;
+	F.byte = 0;
+	F.zeroFlag = A == 0;
+	F.halfCarryFlag = 1;
 }
 
 void CPU::BIT(uint8_t bit, uint8_t value)
 {
-	m_registerNamed.F.zeroFlag = (value >> bit) & 1;
-	m_registerNamed.F.subtractFlag = 0;
-	m_registerNamed.F.halfCarryFlag = 1;
+	F.zeroFlag = (value >> bit) & 1;
+	F.subtractFlag = 0;
+	F.halfCarryFlag = 1;
 }
 
 void CPU::CALL(bool flag)
@@ -702,18 +751,18 @@ void CPU::CALL(bool flag)
 	uint16_t address = getImm16();
 	if (flag) {
 		m_currentInstructionCyclesLeft += 4;
-		pushReg16(m_registerNamed.PC);
-		m_registerNamed.PC = address;
+		pushReg16(PC);
+		PC = address;
 	}
 }
 
 void CPU::CP(uint8_t value)
 {
-	uint16_t result = (int16_t)m_registerNamed.A - (int16_t)value;
-	m_registerNamed.F.zeroFlag = (result == 0);
-	m_registerNamed.F.subtractFlag = 1;
-	m_registerNamed.F.halfCarryFlag = 0; // TODO: calculate halfCarry
-	m_registerNamed.F.carryFlag = (result >> 8) & 1;
+	uint16_t result = (int16_t)A - (int16_t)value;
+	F.zeroFlag = (result == 0);
+	F.subtractFlag = 1;
+	F.halfCarryFlag = 0; // TODO: calculate halfCarry
+	F.carryFlag = (result >> 8) & 1;
 }
 
 void CPU::DECM(uint16_t address)
@@ -727,9 +776,9 @@ void CPU::DECR(uint8_t& reg)
 {
 	uint8_t tempBit = reg & 0x10;
 	--reg;
-	m_registerNamed.F.halfCarryFlag = ((reg & 0x10) ^ tempBit) >> 4;
-	m_registerNamed.F.subtractFlag = 1;
-	m_registerNamed.F.zeroFlag = reg == 0;
+	F.halfCarryFlag = ((reg & 0x10) ^ tempBit) >> 4;
+	F.subtractFlag = 1;
+	F.zeroFlag = reg == 0;
 }
 
 void CPU::DECRR(uint16_t& reg)
@@ -742,9 +791,9 @@ void CPU::INCR(uint8_t& reg)
 {
 	uint8_t tempBit = reg & 0x10;
 	++reg;
-	m_registerNamed.F.halfCarryFlag = ((reg & 0x10) ^ tempBit) >> 4;
-	m_registerNamed.F.subtractFlag = 0;
-	m_registerNamed.F.zeroFlag = reg == 0;
+	F.halfCarryFlag = ((reg & 0x10) ^ tempBit) >> 4;
+	F.subtractFlag = 0;
+	F.zeroFlag = reg == 0;
 }
 
 void CPU::INCRR(uint16_t& reg)
@@ -758,13 +807,13 @@ void CPU::JP(bool flag)
 	uint16_t address = getImm16();
 	if (flag) {
 		m_currentInstructionCyclesLeft += 4;
-		m_registerNamed.PC = address;
+		PC = address;
 	}
 }
 
 void CPU::JPHL()
 {
-	m_registerNamed.PC = m_registerNamed.HL;
+	PC = HL;
 }
 
 void CPU::JR(bool flag)
@@ -772,7 +821,7 @@ void CPU::JR(bool flag)
 	int8_t signedByte = getImm8();
 	if (flag) {
 		m_currentInstructionCyclesLeft += 4;
-		m_registerNamed.PC += signedByte;
+		PC += signedByte;
 	}
 }
 
@@ -793,97 +842,97 @@ void CPU::LDRR(uint16_t& reg, uint16_t value)
 
 void CPU::OR(uint8_t value)
 {
-	m_registerNamed.A |= value;
-	m_registerNamed.F.byte = 0;
-	m_registerNamed.F.zeroFlag = m_registerNamed.A == 0;
+	A |= value;
+	F.byte = 0;
+	F.zeroFlag = A == 0;
 }
 
 void CPU::RET(bool flag)
 {
 	if (flag) {
 		m_currentInstructionCyclesLeft += 4;
-		m_registerNamed.PC = popReg16();
+		PC = popReg16();
 	}
 }
 
 void CPU::RL(uint8_t& reg)
 {
-	uint8_t oldCarry = m_registerNamed.F.carryFlag;
-	m_registerNamed.F.byte = 0;
-	m_registerNamed.F.carryFlag = reg >> 7;
+	uint8_t oldCarry = F.carryFlag;
+	F.byte = 0;
+	F.carryFlag = reg >> 7;
 	reg <<= 1;
 	reg |= oldCarry;
-	m_registerNamed.F.zeroFlag = (reg == 0);
+	F.zeroFlag = (reg == 0);
 }
 
 void CPU::RLA()
 {
-	uint8_t oldCarry = m_registerNamed.F.carryFlag;
-	m_registerNamed.F.byte = 0; // TODO: zero flag affected!
-	m_registerNamed.F.carryFlag = m_registerNamed.A >> 7;
-	m_registerNamed.A <<= 1;
-	m_registerNamed.A |= oldCarry;
-	// m_registerNamed.F.zeroFlag = 0; // TODO: not sure if not affected (Z80 Manual) or reset (pastraiser.com GB opcodes)
+	uint8_t oldCarry = F.carryFlag;
+	F.byte = 0; // TODO: zero flag affected!
+	F.carryFlag = A >> 7;
+	A <<= 1;
+	A |= oldCarry;
+	// F.zeroFlag = 0; // TODO: not sure if not affected (Z80 Manual) or reset (pastraiser.com GB opcodes)
 }
 
 void CPU::RLCA()
 {
-	m_registerNamed.F.byte = 0;
-	m_registerNamed.F.carryFlag = m_registerNamed.A >> 7;
-	m_registerNamed.A <<= 1;
-	m_registerNamed.A |= m_registerNamed.F.carryFlag;
+	F.byte = 0;
+	F.carryFlag = A >> 7;
+	A <<= 1;
+	A |= F.carryFlag;
 }
 
 void CPU::RR(uint8_t& reg)
 {
-	uint8_t oldCarry = m_registerNamed.F.carryFlag << 7;
-	m_registerNamed.F.byte = 0;
-	m_registerNamed.F.carryFlag = reg & 1;
+	uint8_t oldCarry = F.carryFlag << 7;
+	F.byte = 0;
+	F.carryFlag = reg & 1;
 	reg >>= 1;
 	reg |= oldCarry;
-	m_registerNamed.F.zeroFlag = (reg == 0);
+	F.zeroFlag = (reg == 0);
 }
 
 void CPU::RRA()
 {
-	uint8_t oldCarry = m_registerNamed.F.carryFlag << 7;
-	m_registerNamed.F.byte = 0; // TODO: zero flag affected!
-	m_registerNamed.F.carryFlag = m_registerNamed.A & 1;
-	m_registerNamed.A >>= 1;
-	m_registerNamed.A |= oldCarry;
-	// m_registerNamed.F.zeroFlag = 0; // TODO: not sure if not affected (Z80 Manual) or reset (pastraiser.com GB opcodes)
+	uint8_t oldCarry = F.carryFlag << 7;
+	F.byte = 0; // TODO: zero flag affected!
+	F.carryFlag = A & 1;
+	A >>= 1;
+	A |= oldCarry;
+	// F.zeroFlag = 0; // TODO: not sure if not affected (Z80 Manual) or reset (pastraiser.com GB opcodes)
 }
 
 void CPU::RST(uint16_t address)
 {
 	m_currentInstructionCyclesLeft += 4;
-	pushReg16(m_registerNamed.PC);
-	m_registerNamed.PC = address;
+	pushReg16(PC);
+	PC = address;
 }
 
 void CPU::SETM(uint8_t bit)
 {
-	uint8_t value = (this->*m_readByteFunc)(m_registerNamed.HL);
+	uint8_t value = (this->*m_readByteFunc)(HL);
 	value |= 1 << bit;
-	storeByte(m_registerNamed.HL, value);
+	storeByte(HL, value);
 }
 
 void CPU::SRL(uint8_t& reg)
 {
-	m_registerNamed.F.byte = 0;
-	m_registerNamed.F.carryFlag = reg & 1;
+	F.byte = 0;
+	F.carryFlag = reg & 1;
 	reg >>= 1;
-	m_registerNamed.F.zeroFlag = (reg == 0);
+	F.zeroFlag = (reg == 0);
 }
 
 void CPU::SUB(uint8_t value)
 {
-	int16_t result = m_registerNamed.A -= value;
-	m_registerNamed.A = result & 0xFF;
-	m_registerNamed.F.zeroFlag = (m_registerNamed.A == 0);
-	m_registerNamed.F.subtractFlag = 1;
-	m_registerNamed.F.halfCarryFlag = 0; // TODO: set if not borrow from bit4
-	m_registerNamed.F.carryFlag = !(result & 0xFF00); // TODO: test this
+	int16_t result = A -= value;
+	A = result & 0xFF;
+	F.zeroFlag = (A == 0);
+	F.subtractFlag = 1;
+	F.halfCarryFlag = 0; // TODO: set if not borrow from bit4
+	F.carryFlag = !(result & 0xFF00); // TODO: test this
 }
 
 void CPU::SWAP(uint8_t& reg)
@@ -891,13 +940,13 @@ void CPU::SWAP(uint8_t& reg)
 	uint8_t lo = reg & 0xF;
 	reg >>= 4;
 	reg |= lo;
-	m_registerNamed.F.byte = 0;
-	m_registerNamed.F.zeroFlag = (reg == 0);
+	F.byte = 0;
+	F.zeroFlag = (reg == 0);
 }
 
 void CPU::XOR(uint8_t value)
 {
-	m_registerNamed.A ^= value;
-	m_registerNamed.F.byte = 0;
-	m_registerNamed.F.zeroFlag = m_registerNamed.A == 0;
+	A ^= value;
+	F.byte = 0;
+	F.zeroFlag = A == 0;
 }

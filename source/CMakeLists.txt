@@ -13,10 +13,14 @@ set(SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/cartridge.h
     ${CMAKE_CURRENT_SOURCE_DIR}/cpu.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/cpu.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/io.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/io.h
     ${CMAKE_CURRENT_SOURCE_DIR}/memory_map.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/memory_map.h
     ${CMAKE_CURRENT_SOURCE_DIR}/ppu.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ppu.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/timers.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/timers.h
 )
 
 add_library(${TARGET_NAME_LIB} STATIC

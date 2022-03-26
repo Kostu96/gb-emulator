@@ -1,6 +1,8 @@
 #pragma once
 #include "cartridge.h"
 #include "ppu.h"
+#include "io.h"
+#include "timers.h"
 
 #include <cpp-common/non_copyable.h>
 #include <cstdint>
@@ -35,6 +37,8 @@ public:
 private:
 	Cartridge m_cartridge;
 	PPU m_PPU;
+	IO m_IO;
+	Timers m_timers;
 	uint8_t* m_WRAM;
 	uint8_t m_HRAM[HRAM_SIZE];
 };

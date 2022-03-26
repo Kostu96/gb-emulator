@@ -68,52 +68,61 @@ private:
 		uint8_t byte;
 	};
 
-	struct RegisterNamed {
-		union {
-			struct {
-				uint8_t C;
-				uint8_t B;
-			};
-			uint16_t BC;
+	union {
+		struct {
+			uint8_t C;
+			uint8_t B;
 		};
-		union {
-			struct {
-				uint8_t E;
-				uint8_t D;
-			};
-			uint16_t DE;
+		uint16_t BC;
+	};
+	union {
+		struct {
+			uint8_t E;
+			uint8_t D;
 		};
-		union {
-			struct {
-				uint8_t L;
-				uint8_t H;
-			};
-			uint16_t HL;
+		uint16_t DE;
+	};
+	union {
+		struct {
+			uint8_t L;
+			uint8_t H;
 		};
-		union {
-			struct {
-				FlagsRegister F;
-				uint8_t A;
-			};
-			uint16_t AF;
+		uint16_t HL;
+	};
+	union {
+		struct {
+			FlagsRegister F;
+			uint8_t A;
 		};
-		uint16_t SP;
-		uint16_t PC;
+		uint16_t AF;
+	};
+	uint16_t SP;
+	uint16_t PC;
+
+	struct InterruptFlags {
+		uint8_t VBlank  : 1; // 0
+		uint8_t LCDStat : 1; // 1
+		uint8_t timer   : 1; // 2
+		uint8_t serial  : 1; // 3
+		uint8_t joypad  : 1; // 4
+		uint8_t unused  : 3; // 5-7
 	};
 
 	union {
-		RegisterNamed m_registerNamed;
-		uint8_t m_registerArray[12];
-	};
+		InterruptFlags fields;
+		uint8_t byte;
+	} m_interruptEnables;
+	union {
+		InterruptFlags fields;
+		uint8_t byte;
+	} m_IRQs;
+	bool m_interruptsMasterEnable;
+	bool m_EICalled;
 
-	uint8_t m_interruptControl;
-	bool m_interruptsEnabled;
-
-	uint8_t(CPU::* m_readByteFunc)(uint16_t);
-	MemoryMap& m_memoryMap;
-
-	// helper variables
 	uint8_t m_currentInstructionCyclesLeft;
 	bool m_isCBInstruction;
 	bool m_isHalted;
+
+	uint8_t(CPU::* m_readByteFunc)(uint16_t);
+	MemoryMap& m_memoryMap;
 };
