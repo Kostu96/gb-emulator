@@ -12,6 +12,7 @@ public:
 
 	void reset();
 	void doCycles(size_t cycles);
+	void requestInterrupt(uint8_t interrupt);
 private:
 	void executeInstruction(uint8_t opcode);
 	void executeInstructionStandard(uint8_t opcode);
@@ -19,6 +20,7 @@ private:
 
 	uint8_t readByteInternal(uint16_t address);
 	uint8_t readByte(uint16_t address);
+	uint8_t* getMemoryLocation(uint16_t address);
 	void storeByte(uint16_t address, uint8_t byte);
 	uint8_t getImm8();
 	uint16_t getImm16();
@@ -28,6 +30,7 @@ private:
 	void ADC(uint8_t value);
 	void ADD(uint8_t value);
 	void ADDHL(uint16_t value);
+	void ADDSP();
 	void AND(uint8_t value);
 	void BIT(uint8_t bit, uint8_t value);
 	void CALL(bool flag);
@@ -35,7 +38,6 @@ private:
 	void CP(uint8_t value);
 	void CPL();
 	void DAA();
-	void DECM(uint16_t address);
 	void DECR(uint8_t& reg);
 	void DECRR(uint16_t& reg);
 	void INCR(uint8_t& reg);
@@ -47,6 +49,7 @@ private:
 	void LDR(uint8_t& reg, uint8_t value);
 	void LDRR(uint16_t& reg, uint16_t value);
 	void OR(uint8_t value);
+	void RES(uint8_t bit, uint8_t& reg);
 	void RET(bool flag);
 	void RL(uint8_t& reg);
 	void RLA();
@@ -59,7 +62,7 @@ private:
 	void RST(uint16_t address);
 	void SBC(uint8_t value);
 	void SCF();
-	void SETM(uint8_t bit);
+	void SET(uint8_t bit, uint8_t& reg);
 	void SLA(uint8_t& reg);
 	void SRA(uint8_t& reg);
 	void SRL(uint8_t& reg);

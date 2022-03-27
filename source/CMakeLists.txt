@@ -19,8 +19,8 @@ set(SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/memory_map.h
     ${CMAKE_CURRENT_SOURCE_DIR}/ppu.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ppu.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/timers.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/timers.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/timer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/timer.h
 )
 
 add_library(${TARGET_NAME_LIB} STATIC

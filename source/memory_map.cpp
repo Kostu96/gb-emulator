@@ -15,7 +15,8 @@ static AddressRange PPU_RANGE{       0xFF40, 0x000C };
 static AddressRange RESERVED2_RANGE{ 0xFF4C, 0x0033 };
 static AddressRange HRAM_RANGE{      0xFF80, 0x0080 };
 
-MemoryMap::MemoryMap()
+MemoryMap::MemoryMap(CPU& cpu) :
+	m_timer{ cpu }
 {
 	m_WRAM = new uint8_t[WRAM_SIZE];
 }
@@ -51,6 +52,20 @@ uint8_t MemoryMap::load8(uint16_t address) const
 	return 0xCD;
 }
 
+uint8_t* MemoryMap::getMemoryLocation(uint16_t address)
+{
+	uint16_t offset;
+
+	if (VRAM_RANGE.contains(address, offset))
+		return m_PPU.getMemoryLocationVRAM(offset);
+
+	if (WRAM_RANGE.contains(address, offset))
+		return m_WRAM + offset;
+
+	__debugbreak();
+	return nullptr;
+}
+
 void MemoryMap::store8(uint16_t address, uint8_t byte)
 {
 	uint16_t offset;
@@ -82,7 +97,7 @@ void MemoryMap::store8(uint16_t address, uint8_t byte)
 	}
 
 	if (TIMERS_RANGE.contains(address, offset)) {
-		m_timers.store8(offset, byte);
+		m_timer.store8(offset, byte);
 		return;
 	}
 

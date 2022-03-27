@@ -16,11 +16,11 @@ void CPU::reset()
 	PC = 0x0;
 
 	m_interruptEnables.byte = 0x0;
-	m_IRQs.byte = 0x0;
-	m_interruptsMasterEnable = true;
+	m_IRQs.byte = 0xE0;
+	m_interruptsMasterEnable = false;
 	m_EICalled = false;
 
-	m_currentInstructionCyclesLeft = 4; // Let's say that reset takes 4 clock cycles
+	m_currentInstructionCyclesLeft = 0; // Let's say that reset takes 4 clock cycles
 	m_isCBInstruction = false;
 	m_isHalted = false;
 
@@ -31,6 +31,51 @@ void CPU::doCycles(size_t cycles)
 {
 	if (!m_isHalted) {
 		while (cycles--) {
+			if (PC == 0x100) __debugbreak();
+
+			m_memoryMap.getTimer().tick();
+			m_memoryMap.getPPU().tick();
+	
+			// TODO: interrupt should be connected to m_currentInstructionCyclesLeft
+			if (m_interruptsMasterEnable) {
+				// TODO: move this code swh
+				if (m_interruptEnables.fields.VBlank & m_IRQs.fields.VBlank) {
+					m_currentInstructionCyclesLeft += 8;
+					m_interruptsMasterEnable = false;
+					m_IRQs.fields.VBlank = 0;
+					RST(0x40);
+				}
+				else if (m_interruptEnables.fields.LCDStat & m_IRQs.fields.LCDStat) {
+					m_currentInstructionCyclesLeft += 8;
+					m_interruptsMasterEnable = false;
+					m_IRQs.fields.LCDStat = 0;
+					RST(0x48);
+				}
+				else if (m_interruptEnables.fields.timer & m_IRQs.fields.timer) {
+					m_currentInstructionCyclesLeft += 8;
+					m_interruptsMasterEnable = false;
+					m_IRQs.fields.timer = 0;
+					RST(0x50);
+				}
+				else if (m_interruptEnables.fields.serial & m_IRQs.fields.serial) {
+					m_currentInstructionCyclesLeft += 8;
+					m_interruptsMasterEnable = false;
+					m_IRQs.fields.serial = 0;
+					RST(0x58);
+				}
+				else if (m_interruptEnables.fields.joypad & m_IRQs.fields.joypad) {
+					m_currentInstructionCyclesLeft += 8;
+					m_interruptsMasterEnable = false;
+					m_IRQs.fields.joypad = 0;
+					RST(0x60);
+				}
+			}
+
+			if (m_EICalled) {
+				m_interruptsMasterEnable = true;
+				m_EICalled = false;
+			}
+
 			if (m_currentInstructionCyclesLeft == 0) {
 
 				uint8_t opcode = getImm8();
@@ -38,54 +83,17 @@ void CPU::doCycles(size_t cycles)
 			}
 
 			--m_currentInstructionCyclesLeft;
-			m_memoryMap.getPPU().tick();
 		}
 	}
 	else {
 		if (m_IRQs.byte & m_interruptEnables.byte)
 			m_isHalted = false;
 	}
+}
 
-	// TODO: interrupt should be connected to m_currentInstructionCyclesLeft
-	// TODO: interrupts are checked before fething next instruction
-	if (m_interruptsMasterEnable) {
-		// TODO: move this code swh
-		if (m_interruptEnables.fields.VBlank & m_IRQs.fields.VBlank) {
-			m_currentInstructionCyclesLeft += 8;
-			m_interruptsMasterEnable = false;
-			m_IRQs.fields.VBlank = 0;
-			RST(0x40);
-		}
-		else if (m_interruptEnables.fields.LCDStat & m_IRQs.fields.LCDStat) {
-			m_currentInstructionCyclesLeft += 8;
-			m_interruptsMasterEnable = false;
-			m_IRQs.fields.LCDStat = 0;
-			RST(0x48);
-		}
-		else if (m_interruptEnables.fields.timer & m_IRQs.fields.timer) {
-			m_currentInstructionCyclesLeft += 8;
-			m_interruptsMasterEnable = false;
-			m_IRQs.fields.timer = 0;
-			RST(0x50);
-		}
-		else if (m_interruptEnables.fields.serial & m_IRQs.fields.serial) {
-			m_currentInstructionCyclesLeft += 8;
-			m_interruptsMasterEnable = false;
-			m_IRQs.fields.serial = 0;
-			RST(0x58);
-		}
-		else if (m_interruptEnables.fields.joypad & m_IRQs.fields.joypad) {
-			m_currentInstructionCyclesLeft += 8;
-			m_interruptsMasterEnable = false;
-			m_IRQs.fields.joypad = 0;
-			RST(0x60);
-		}
-	}
-
-	if (m_EICalled) {
-		m_interruptsMasterEnable = true;
-		m_EICalled = false;
-	}
+void CPU::requestInterrupt(uint8_t interrupt)
+{
+	m_IRQs.byte |= interrupt;
 }
 
 void CPU::executeInstruction(uint8_t opcode)
@@ -98,8 +106,6 @@ void CPU::executeInstruction(uint8_t opcode)
 
 void CPU::executeInstructionStandard(uint8_t opcode)
 {
-	m_currentInstructionCyclesLeft = 4;
-
 	switch (opcode) {
 	case 0x00: break;
 	case 0x01: LDRR(BC, getImm16()); break;
@@ -111,7 +117,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x07: RLCA(); break;
 	case 0x08: m_currentInstructionCyclesLeft += 8; LDM(getImm16(), SP); break;
 	case 0x09: ADDHL(BC); break;
-	case 0x0A: __debugbreak(); break;
+	case 0x0A: LDR(A, (this->*m_readByteFunc)(BC)); break;
 	case 0x0B: DECRR(BC); break;
 	case 0x0C: INCR(C); break;
 	case 0x0D: DECR(C); break;
@@ -153,14 +159,13 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x31: LDRR(SP, getImm16()); break;
 	case 0x32: LDM(HL--, A); break;
 	case 0x33: INCRR(SP); break;
-	case 0x34: __debugbreak(); break;
-	case 0x35: DECM(HL); break;
+	case 0x34: INCR(*getMemoryLocation(HL)); break;
+	case 0x35: DECR(*getMemoryLocation(HL)); break;
 	case 0x36: LDM(HL, getImm8()); break;
 	case 0x37: SCF(); break;
 	case 0x38: JR(F.carryFlag); break;
 	case 0x39: ADDHL(SP); break;
-	case 0x3A: __debugbreak(); break;
-	case 0x3B: __debugbreak(); break;
+	case 0x3A: LDR(A, (this->*m_readByteFunc)(HL--)); break;
 	case 0x3C: INCR(A); break;
 	case 0x3D: DECR(A); break;
 	case 0x3E: LDR(A, getImm8()); break;
@@ -303,49 +308,40 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0xC7: RST(0x00); break;
 	case 0xC8: RET(F.zeroFlag); break;
 	case 0xC9: RET(true); break;
-	case 0xCA:  __debugbreak(); break;
+	case 0xCA: JP(F.zeroFlag); break;
 	case 0xCB: m_isCBInstruction = true; break;
-	case 0xCC: __debugbreak(); break;
+	case 0xCC: CALL(F.zeroFlag); break;
 	case 0xCD: CALL(true); break;
 	case 0xCE: ADC(getImm8()); break;
 	case 0xCF: RST(0x08); break;
 	case 0xD0: RET(!F.carryFlag); break;
 	case 0xD1: DE = popReg16(); break;
-	case 0xD2: __debugbreak(); break;
-	case 0xD3: __debugbreak(); break;
-	case 0xD4: __debugbreak(); break;
+	case 0xD2: JP(!F.carryFlag); break;
+	case 0xD4: CALL(!F.carryFlag); break;
 	case 0xD5: m_currentInstructionCyclesLeft += 4; pushReg16(DE); break;
 	case 0xD6: SUB(getImm8()); break;
 	case 0xD7: RST(0x10); break;
 	case 0xD8: RET(F.carryFlag); break;
-	case 0xD9: m_EICalled = true; RET(true); break;
-	case 0xDA: __debugbreak(); break;
-	case 0xDB: __debugbreak(); break;
-	case 0xDC: __debugbreak(); break;
-	case 0xDD: __debugbreak(); break;
+	case 0xD9: m_interruptsMasterEnable = true; RET(true); break;
+	case 0xDA: JP(F.carryFlag); break;
+	case 0xDC: CALL(F.carryFlag); break;
 	case 0xDE: SBC(getImm8()); break;
 	case 0xDF: RST(0x18); break;
 	case 0xE0: LDM(0xFF00 | getImm8(), A); break;
 	case 0xE1: HL = popReg16(); break;
 	case 0xE2: LDM(0xFF00 | C, A); break;
-	case 0xE3: __debugbreak(); break;
-	case 0xE4: __debugbreak(); break;
 	case 0xE5: m_currentInstructionCyclesLeft += 4; pushReg16(HL); break;
 	case 0xE6: AND(getImm8()); break;
 	case 0xE7: RST(0x20); break;
-	case 0xE8: __debugbreak(); break;
+	case 0xE8: ADDSP(); break;
 	case 0xE9: JPHL(); break;
 	case 0xEA: LDM(getImm16(), A); break;
-	case 0xEB: __debugbreak(); break;
-	case 0xEC: __debugbreak(); break;
-	case 0xED: __debugbreak(); break;
 	case 0xEE: XOR(getImm8()); break;
 	case 0xEF: RST(0x28); break;
 	case 0xF0: LDR(A, (this->*m_readByteFunc)(0xFF00 | getImm8())); break;
 	case 0xF1: AF = popReg16(); F.alwaysZero = 0; break;
-	case 0xF2: __debugbreak(); break;
+	case 0xF2: LDR(A, (this->*m_readByteFunc)(0xFF00 | C)); break;
 	case 0xF3: m_interruptsMasterEnable = false; break;
-	case 0xF4: __debugbreak(); break;
 	case 0xF5: m_currentInstructionCyclesLeft += 4; pushReg16(AF); break;
 	case 0xF6: OR(getImm8()); break;
 	case 0xF7: RST(0x30); break;
@@ -353,279 +349,37 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0xF9: m_currentInstructionCyclesLeft += 4; LDRR(SP, HL); break;
 	case 0xFA: LDR(A, (this->*m_readByteFunc)(getImm16())); break;
 	case 0xFB: m_EICalled = true; break;
-	case 0xFC: __debugbreak(); break;
-	case 0xFD: __debugbreak(); break;
 	case 0xFE: CP(getImm8()); break;
 	case 0xFF: RST(0x38); break;
-	default: __debugbreak();
+	default: abort();
 	}
 }
 
 void CPU::executeInstructionCBPrefix(uint8_t opcode)
 {
-	uint8_t tempBit;
 	m_isCBInstruction = false;
-	m_currentInstructionCyclesLeft = 8;
+	m_currentInstructionCyclesLeft += 4;
 
-	switch (opcode) {
-	case 0x00: RLC(B); break;
-	case 0x01: RLC(C); break;
-	case 0x02: RLC(D); break;
-	case 0x03: RLC(E); break;
-	case 0x04: RLC(H); break;
-	case 0x05: RLC(L); break;
-	case 0x06: // m_currentInstructionCyclesLeft += 4; RLC((this->*m_readByteFunc)(HL));
-		__debugbreak(); break;
-	case 0x07: RRC(A); break;
-	case 0x08: RRC(B); break;
-	case 0x09: RRC(C); break;
-	case 0x0A: RRC(D); break;
-	case 0x0B: RRC(E); break;
-	case 0x0C: RRC(H); break;
-	case 0x0D: RRC(L); break;
-	case 0x0E: __debugbreak(); break;
-	case 0x0F: RRC(A); break;
-	case 0x10: RL(B); break;
-	case 0x11: RL(C); break;
-	case 0x12: RL(D); break;
-	case 0x13: RL(E); break;
-	case 0x14: RL(H); break;
-	case 0x15: RL(L); break;
-	case 0x16: __debugbreak(); break;
-	case 0x17: RL(A); break;
-	case 0x18: RR(B); break;
-	case 0x19: RR(C); break;
-	case 0x1A: RR(D); break;
-	case 0x1B: RR(E); break;
-	case 0x1C: RR(H); break;
-	case 0x1D: RR(L); break;
-	case 0x1E: __debugbreak(); break;
-	case 0x1F: SLA(A); break;
-	case 0x20: SLA(B); break;
-	case 0x21: SLA(C); break;
-	case 0x22: SLA(D); break;
-	case 0x23: SLA(E); break;
-	case 0x24: SLA(H); break;
-	case 0x25: SLA(L); break;
-	case 0x26: __debugbreak(); break;
-	case 0x27: SLA(A); break;
-	case 0x28: SRA(B); break;
-	case 0x29: SRA(C); break;
-	case 0x2A: SRA(D); break;
-	case 0x2B: SRA(E); break;
-	case 0x2C: SRA(H); break;
-	case 0x2D: SRA(L); break;
-	case 0x2E: __debugbreak(); break;
-	case 0x2F: SRA(A); break;
-	case 0x30: SWAP(B); break;
-	case 0x31: SWAP(C); break;
-	case 0x32: SWAP(D); break;
-	case 0x33: SWAP(E); break;
-	case 0x34: SWAP(H); break;
-	case 0x35: SWAP(L); break;
-	case 0x36: __debugbreak(); break;
-	case 0x37: SWAP(A); break;
-	case 0x38: SRL(B); break;
-	case 0x39: SRL(C); break;
-	case 0x3A: SRL(D); break;
-	case 0x3B: SRL(E); break;
-	case 0x3C: SRL(H); break;
-	case 0x3D: SRL(L); break;
-	case 0x3E: __debugbreak(); break;
-	case 0x3F: SRL(A); break;
-	case 0x40: BIT(0, B); break;
-	case 0x41: BIT(0, C); break;
-	case 0x42: BIT(0, D); break;
-	case 0x43: BIT(0, E); break;
-	case 0x44: BIT(0, H); break;
-	case 0x45: BIT(0, L); break;
-	case 0x46: __debugbreak(); break;
-	case 0x47: BIT(0, A); break;
-	case 0x48: __debugbreak(); break;
-	case 0x49: __debugbreak(); break;
-	case 0x4A: __debugbreak(); break;
-	case 0x4B: __debugbreak(); break;
-	case 0x4C: __debugbreak(); break;
-	case 0x4D: __debugbreak(); break;
-	case 0x4E: __debugbreak(); break;
-	case 0x4F: __debugbreak(); break;
-	case 0x50: __debugbreak(); break;
-	case 0x51: __debugbreak(); break;
-	case 0x52: __debugbreak(); break;
-	case 0x53: __debugbreak(); break;
-	case 0x54: __debugbreak(); break;
-	case 0x55: __debugbreak(); break;
-	case 0x56: __debugbreak(); break;
-	case 0x57: __debugbreak(); break;
-	case 0x58: __debugbreak(); break;
-	case 0x59: __debugbreak(); break;
-	case 0x5A: __debugbreak(); break;
-	case 0x5B: __debugbreak(); break;
-	case 0x5C: __debugbreak(); break;
-	case 0x5D: __debugbreak(); break;
-	case 0x5E: __debugbreak(); break;
-	case 0x5F: __debugbreak(); break;
-	case 0x60: __debugbreak(); break;
-	case 0x61: __debugbreak(); break;
-	case 0x62: __debugbreak(); break;
-	case 0x63: __debugbreak(); break;
-	case 0x64: __debugbreak(); break;
-	case 0x65: __debugbreak(); break;
-	case 0x66: __debugbreak(); break;
-	case 0x67: __debugbreak(); break;
-	case 0x68: __debugbreak(); break;
-	case 0x69: __debugbreak(); break;
-	case 0x6A: __debugbreak(); break;
-	case 0x6B: __debugbreak(); break;
-	case 0x6C: __debugbreak(); break;
-	case 0x6D: __debugbreak(); break;
-	case 0x6E: __debugbreak(); break;
-	case 0x6F: __debugbreak(); break;
-	case 0x70: __debugbreak(); break;
-	case 0x71: __debugbreak(); break;
-	case 0x72: __debugbreak(); break;
-	case 0x73: __debugbreak(); break;
-	case 0x74: __debugbreak(); break;
-	case 0x75: __debugbreak(); break;
-	case 0x76: __debugbreak(); break;
-	case 0x77: __debugbreak(); break;
-	case 0x78: BIT(7, B); break;
-	case 0x79: BIT(7, C); break;
-	case 0x7A: BIT(7, D); break;
-	case 0x7B: BIT(7, E); break;
-	case 0x7C: BIT(7, H); break;
-	case 0x7D: BIT(7, L); break;
-	case 0x7E: m_currentInstructionCyclesLeft += 4; BIT(7, (this->*m_readByteFunc)(HL)); break;
-	case 0x7F: __debugbreak(); break;
-	case 0x80: __debugbreak(); break;
-	case 0x81: __debugbreak(); break;
-	case 0x82: __debugbreak(); break;
-	case 0x83: __debugbreak(); break;
-	case 0x84: __debugbreak(); break;
-	case 0x85: __debugbreak(); break;
-	case 0x86: __debugbreak(); break;
-	case 0x87: __debugbreak(); break;
-	case 0x88: __debugbreak(); break;
-	case 0x89: __debugbreak(); break;
-	case 0x8A: __debugbreak(); break;
-	case 0x8B: __debugbreak(); break;
-	case 0x8C: __debugbreak(); break;
-	case 0x8D: __debugbreak(); break;
-	case 0x8E: __debugbreak(); break;
-	case 0x8F: __debugbreak(); break;
-	case 0x90: __debugbreak(); break;
-	case 0x91: __debugbreak(); break;
-	case 0x92: __debugbreak(); break;
-	case 0x93: __debugbreak(); break;
-	case 0x94: __debugbreak(); break;
-	case 0x95: __debugbreak(); break;
-	case 0x96: __debugbreak(); break;
-	case 0x97: __debugbreak(); break;
-	case 0x98: __debugbreak(); break;
-	case 0x99: __debugbreak(); break;
-	case 0x9A: __debugbreak(); break;
-	case 0x9B: __debugbreak(); break;
-	case 0x9C: __debugbreak(); break;
-	case 0x9D: __debugbreak(); break;
-	case 0x9E: __debugbreak(); break;
-	case 0x9F: __debugbreak(); break;
-	case 0xA0: __debugbreak(); break;
-	case 0xA1: __debugbreak(); break;
-	case 0xA2: __debugbreak(); break;
-	case 0xA3: __debugbreak(); break;
-	case 0xA4: __debugbreak(); break;
-	case 0xA5: __debugbreak(); break;
-	case 0xA6: __debugbreak(); break;
-	case 0xA7: __debugbreak(); break;
-	case 0xA8: __debugbreak(); break;
-	case 0xA9: __debugbreak(); break;
-	case 0xAA: __debugbreak(); break;
-	case 0xAB: __debugbreak(); break;
-	case 0xAC: __debugbreak(); break;
-	case 0xAD: __debugbreak(); break;
-	case 0xAE: __debugbreak(); break;
-	case 0xAF: __debugbreak(); break;
-	case 0xB0: __debugbreak(); break;
-	case 0xB1: __debugbreak(); break;
-	case 0xB2: __debugbreak(); break;
-	case 0xB3: __debugbreak(); break;
-	case 0xB4: __debugbreak(); break;
-	case 0xB5: __debugbreak(); break;
-	case 0xB6: __debugbreak(); break;
-	case 0xB7: __debugbreak(); break;
-	case 0xB8: __debugbreak(); break;
-	case 0xB9: __debugbreak(); break;
-	case 0xBA: __debugbreak(); break;
-	case 0xBB: __debugbreak(); break;
-	case 0xBC: __debugbreak(); break;
-	case 0xBD: __debugbreak(); break;
-	case 0xBE: __debugbreak(); break;
-	case 0xBF: __debugbreak(); break;
-	case 0xC0: __debugbreak(); break;
-	case 0xC1: __debugbreak(); break;
-	case 0xC2: __debugbreak(); break;
-	case 0xC3: __debugbreak(); break;
-	case 0xC4: __debugbreak(); break;
-	case 0xC5: __debugbreak(); break;
-	case 0xC6: SETM(0); break;
-	case 0xC7: __debugbreak(); break;
-	case 0xC8: __debugbreak(); break;
-	case 0xC9: __debugbreak(); break;
-	case 0xCA: __debugbreak(); break;
-	case 0xCB: __debugbreak(); break;
-	case 0xCC: __debugbreak(); break;
-	case 0xCD: __debugbreak(); break;
-	case 0xCE: SETM(1); break;
-	case 0xCF: __debugbreak(); break;
-	case 0xD0: __debugbreak(); break;
-	case 0xD1: __debugbreak(); break;
-	case 0xD2: __debugbreak(); break;
-	case 0xD3: __debugbreak(); break;
-	case 0xD4: __debugbreak(); break;
-	case 0xD5: __debugbreak(); break;
-	case 0xD6: SETM(2); break;
-	case 0xD7: __debugbreak(); break;
-	case 0xD8: __debugbreak(); break;
-	case 0xD9: __debugbreak(); break;
-	case 0xDA: __debugbreak(); break;
-	case 0xDB: __debugbreak(); break;
-	case 0xDC: __debugbreak(); break;
-	case 0xDD: __debugbreak(); break;
-	case 0xDE: SETM(3); break;
-	case 0xDF: __debugbreak(); break;
-	case 0xE0: __debugbreak(); break;
-	case 0xE1: __debugbreak(); break;
-	case 0xE2: __debugbreak(); break;
-	case 0xE3: __debugbreak(); break;
-	case 0xE4: __debugbreak(); break;
-	case 0xE5: __debugbreak(); break;
-	case 0xE6: SETM(4); break;
-	case 0xE7: __debugbreak(); break;
-	case 0xE8: __debugbreak(); break;
-	case 0xE9: __debugbreak(); break;
-	case 0xEA: __debugbreak(); break;
-	case 0xEB: __debugbreak(); break;
-	case 0xEC: __debugbreak(); break;
-	case 0xED: __debugbreak(); break;
-	case 0xEE: SETM(5); break;
-	case 0xEF: __debugbreak(); break;
-	case 0xF0: __debugbreak(); break;
-	case 0xF1: __debugbreak(); break;
-	case 0xF2: __debugbreak(); break;
-	case 0xF3: __debugbreak(); break;
-	case 0xF4: __debugbreak(); break;
-	case 0xF5: __debugbreak(); break;
-	case 0xF6: SETM(6); break;
-	case 0xF7: __debugbreak(); break;
-	case 0xF8: __debugbreak(); break;
-	case 0xF9: __debugbreak(); break;
-	case 0xFA: __debugbreak(); break;
-	case 0xFB: __debugbreak(); break;
-	case 0xFC: __debugbreak(); break;
-	case 0xFD: __debugbreak(); break;
-	case 0xFE: SETM(7); break;
-	case 0xFF: __debugbreak(); break;
-	default: __debugbreak();
+	uint8_t instr = opcode >> 3;
+	uint8_t reg = opcode & 7;
+	uint8_t* param[8]{ &B, &C, &D, &E, &H, &L, reg == 6 ? getMemoryLocation(HL) : nullptr, &A };
+	switch (instr) {
+	case 0x00: RLC(*param[reg]); break;
+	case 0x01: RRC(*param[reg]); break;
+	case 0x02: RL(*param[reg]); break;
+	case 0x03: RR(*param[reg]); break;
+	case 0x04: SLA(*param[reg]); break;
+	case 0x05: SRA(*param[reg]); break;
+	case 0x06: SWAP(*param[reg]); break;
+	case 0x07: SRL(*param[reg]); break;
+	default:
+		uint8_t subinstr = instr >> 3;
+		uint8_t bit = instr & 7;
+		switch (subinstr) {
+		case 1: BIT(bit, *param[reg]); break;
+		case 2: RES(bit, *param[reg]); break;
+		case 3: SET(bit, *param[reg]); break;
+		}
 	}
 }
 
@@ -653,13 +407,30 @@ uint8_t CPU::readByte(uint16_t address)
 	}
 }
 
+uint8_t* CPU::getMemoryLocation(uint16_t address)
+{
+	m_currentInstructionCyclesLeft += 8;
+
+	switch (address) {
+	case 0xFF0F:
+		return &m_IRQs.byte;
+	case 0xFFFF:
+		return &m_interruptEnables.byte;
+	default:
+		return m_memoryMap.getMemoryLocation(address);
+	}
+}
+
 void CPU::storeByte(uint16_t address, uint8_t byte)
 {
 	m_currentInstructionCyclesLeft += 4;
 
 	switch (address) {
 	case 0xFF50:
+		// Internal ROM hand-off
 		m_readByteFunc = &CPU::readByte;
+		m_IRQs.byte = 0xE1;
+		m_memoryMap.getTimer().handoffReset();
 		break;
 	case 0xFF0F:
 		m_IRQs.byte = byte;
@@ -730,9 +501,22 @@ void CPU::ADDHL(uint16_t value)
 {
 	m_currentInstructionCyclesLeft += 4;
 	uint32_t result = HL + value;
-	uint16_t result12bit = (A & 0xFFF) + (value & 0xFFF);
+	uint16_t result12bit = (HL & 0xFFF) + (value & 0xFFF);
 	HL = result;
 	F.zeroFlag = (HL == 0); // TODO: different specs
+	F.subtractFlag = 0;
+	F.halfCarryFlag = result12bit >> 12;
+	F.carryFlag = result >> 16;
+}
+
+void CPU::ADDSP()
+{
+	m_currentInstructionCyclesLeft += 4;
+	uint8_t value = getImm8();
+	uint32_t result = SP + value;
+	uint16_t result12bit = (SP & 0xFFF) + (value & 0xFFF);
+	SP = result;
+	F.zeroFlag = (SP == 0); // TODO: different specs
 	F.subtractFlag = 0;
 	F.halfCarryFlag = result12bit >> 12;
 	F.carryFlag = result >> 16;
@@ -817,18 +601,11 @@ void CPU::DAA()
 	F.halfCarryFlag = 0;
 }
 
-void CPU::DECM(uint16_t address)
-{
-	uint8_t value = (this->*m_readByteFunc)(address);
-	DECR(value);
-	storeByte(address, value);
-}
-
 void CPU::DECR(uint8_t& reg)
 {
-	uint8_t tempBit = reg & 0x10;
+	uint8_t tempBit = ~reg & 0x10;
 	--reg;
-	F.halfCarryFlag = ((reg & 0x10) ^ tempBit) >> 4;
+	F.halfCarryFlag = ((reg & 0x10) & tempBit) >> 4;
 	F.subtractFlag = 1;
 	F.zeroFlag = reg == 0;
 }
@@ -843,7 +620,7 @@ void CPU::INCR(uint8_t& reg)
 {
 	uint8_t tempBit = reg & 0x10;
 	++reg;
-	F.halfCarryFlag = ((reg & 0x10) ^ tempBit) >> 4;
+	F.halfCarryFlag = (~(reg & 0x10) & tempBit) >> 4;
 	F.subtractFlag = 0;
 	F.zeroFlag = reg == 0;
 }
@@ -897,6 +674,11 @@ void CPU::OR(uint8_t value)
 	A |= value;
 	F.byte = 0;
 	F.zeroFlag = A == 0;
+}
+
+void CPU::RES(uint8_t bit, uint8_t& reg)
+{
+	reg &= ~(1 << bit);
 }
 
 void CPU::RET(bool flag)
@@ -1006,11 +788,9 @@ void CPU::SCF()
 	F.carryFlag = 1;
 }
 
-void CPU::SETM(uint8_t bit)
+void CPU::SET(uint8_t bit, uint8_t& reg)
 {
-	uint8_t value = (this->*m_readByteFunc)(HL);
-	value |= 1 << bit;
-	storeByte(HL, value);
+	reg |= 1 << bit;
 }
 
 void CPU::SLA(uint8_t& reg)

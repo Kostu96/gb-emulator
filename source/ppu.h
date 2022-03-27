@@ -14,6 +14,7 @@ public:
 	void tick();
 
 	uint8_t load8VRAM(uint16_t address) const;
+	uint8_t* getMemoryLocationVRAM(uint16_t address);
 	void store8VRAM(uint16_t address, uint8_t byte);
 	uint8_t load8OAM(uint16_t address) const;
 	void store8OAM(uint16_t address, uint8_t byte);
