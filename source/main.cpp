@@ -28,7 +28,16 @@ public:
 		m_window.setVerticalSyncEnabled(true);
 
 		//m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/cpu_instrs/cpu_instrs.gb");
-		m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/cpu_instrs/individual/01-special.gb");
+		//m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/cpu_instrs/individual/01-special.gb");
+		//m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/cpu_instrs/individual/02-interrupts.gb");
+		//m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/cpu_instrs/individual/03-op sp,hl.gb");
+		//m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/cpu_instrs/individual/04-op r,imm.gb");
+		//m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/cpu_instrs/individual/05-op rp.gb");
+		//m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/cpu_instrs/individual/06-ld r,r.gb");
+		//m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb");
+		//m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/cpu_instrs/individual/08-misc instrs.gb");
+		//m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/cpu_instrs/individual/09-op r,r.gb");
+		m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/cpu_instrs/individual/10-bit ops.gb");
 		//m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/instr_timing/instr_timing.gb");
 		//m_memoryMap.insertCartridge("assets/test_roms/dmg-acid2.gb");
 		//m_memoryMap.insertCartridge("E:/Retro/GameBoy/tetris.gb");
