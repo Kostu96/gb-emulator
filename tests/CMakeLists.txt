@@ -1,4 +1,5 @@
 set(SOURCE_FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/blargg_tests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
 )
 

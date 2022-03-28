@@ -13,8 +13,8 @@ set(SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/cartridge.h
     ${CMAKE_CURRENT_SOURCE_DIR}/cpu.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/cpu.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/io.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/io.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/input.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/input.h
     ${CMAKE_CURRENT_SOURCE_DIR}/memory_map.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/memory_map.h
     ${CMAKE_CURRENT_SOURCE_DIR}/ppu.cpp
@@ -32,6 +32,10 @@ source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX source FILES ${SOURCE_FILES
 
 target_include_directories(${TARGET_NAME_LIB} PRIVATE
 	${CMAKE_CURRENT_BINARY_DIR}/generated_sources
+)
+
+target_include_directories(${TARGET_NAME_LIB} PUBLIC
+	${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 target_link_libraries(${TARGET_NAME_LIB} PUBLIC

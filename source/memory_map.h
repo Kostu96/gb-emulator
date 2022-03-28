@@ -1,7 +1,7 @@
 #pragma once
 #include "cartridge.h"
 #include "ppu.h"
-#include "io.h"
+#include "input.h"
 #include "timer.h"
 
 #include <cpp-common/non_copyable.h>
@@ -29,6 +29,7 @@ public:
 	~MemoryMap();
 
 	PPU& getPPU() { return m_PPU; }
+	IO& getIO() { return m_IO; }
 	Timer& getTimer() { return m_timer; }
 
 	uint8_t load8(uint16_t address) const;
