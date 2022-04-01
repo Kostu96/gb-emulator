@@ -25,8 +25,10 @@ public:
 	constexpr static size_t WRAM_SIZE = 0x2000;
 	constexpr static size_t HRAM_SIZE = 0x80;
 
-	MemoryMap(CPU& cpu);
+	MemoryMap();
 	~MemoryMap();
+
+	void connect(CPU& cpu);
 
 	PPU& getPPU() { return m_PPU; }
 	IO& getIO() { return m_IO; }

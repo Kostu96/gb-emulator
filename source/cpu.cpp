@@ -4,11 +4,15 @@
 #include <cpp-common/helper_functions.h>
 #include <iostream>
 
-CPU::CPU(MemoryMap& memoryMap) :
-	m_memoryMap(memoryMap)
+CPU::CPU()
 {
 	reset();
 };
+
+void CPU::connect(MemoryMap& memoryMap)
+{
+	m_memoryMap = &memoryMap;
+}
 
 void CPU::reset()
 {
@@ -31,10 +35,10 @@ void CPU::doCycles(size_t cycles)
 {
 	if (!m_isHalted) {
 		while (cycles--) {
-			if (PC == 0x100) __debugbreak();
+			//if (PC == 0x100) __debugbreak();
 
-			m_memoryMap.getTimer().tick();
-			m_memoryMap.getPPU().tick();
+			m_memoryMap->getTimer().tick();
+			m_memoryMap->getPPU().tick();
 	
 			// TODO: interrupt should be connected to m_currentInstructionCyclesLeft
 			if (m_interruptsMasterEnable) {
@@ -403,7 +407,7 @@ uint8_t CPU::readByte(uint16_t address)
 	case 0xFFFF:
 		return m_interruptEnables.byte;
 	default:
-		return m_memoryMap.load8(address);
+		return m_memoryMap->load8(address);
 	}
 }
 
@@ -417,7 +421,7 @@ uint8_t* CPU::getMemoryLocation(uint16_t address)
 	case 0xFFFF:
 		return &m_interruptEnables.byte;
 	default:
-		return m_memoryMap.getMemoryLocation(address);
+		return m_memoryMap->getMemoryLocation(address);
 	}
 }
 
@@ -430,7 +434,7 @@ void CPU::storeByte(uint16_t address, uint8_t byte)
 		// Internal ROM hand-off
 		m_readByteFunc = &CPU::readByte;
 		m_IRQs.byte = 0xE1;
-		m_memoryMap.getTimer().handoffReset();
+		m_memoryMap->getTimer().handoffReset();
 		break;
 	case 0xFF0F:
 		m_IRQs.byte = byte;
@@ -439,7 +443,7 @@ void CPU::storeByte(uint16_t address, uint8_t byte)
 		m_interruptEnables.byte = byte;
 		break;
 	default:
-		m_memoryMap.store8(address, byte);
+		m_memoryMap->store8(address, byte);
 	}	
 }
 

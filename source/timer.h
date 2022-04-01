@@ -8,8 +8,9 @@ class Timer :
     public NonCopyable
 {
 public:
-    Timer(CPU& cpu);
+    Timer();
     
+    void connect(CPU& cpu);
     void tick();
 
     uint8_t load8(uint16_t address) const;
@@ -34,5 +35,5 @@ private:
         uint8_t m_rawData[5];
     };
 
-    CPU& m_CPU;
+    CPU* m_CPU;
 };

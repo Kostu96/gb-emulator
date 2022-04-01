@@ -9,6 +9,7 @@ add_custom_command(
 )
 
 set(SOURCE_FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/base.h
     ${CMAKE_CURRENT_SOURCE_DIR}/cartridge.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/cartridge.h
     ${CMAKE_CURRENT_SOURCE_DIR}/cpu.cpp

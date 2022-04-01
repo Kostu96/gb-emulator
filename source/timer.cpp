@@ -3,14 +3,18 @@
 
 #include <iostream>
 
-Timer::Timer(CPU& cpu) :
-	m_CPU{ cpu }
+Timer::Timer()
 {
 	// TODO: reset timers when gameboy resets
 	m_DIV = 0x0;
 	m_TIMA = 0;
 	m_TMA = 0;
 	m_TAC = 0xF8;
+}
+
+void Timer::connect(CPU& cpu)
+{
+	m_CPU = &cpu;
 }
 
 void Timer::tick()
@@ -31,7 +35,7 @@ void Timer::tick()
 	if (!edgeDetectorInput && (prevDIV & bit)) ++m_TIMA;
 	if (m_TIMA == 0xFF) {
 		m_TIMA = m_TMA;
-		m_CPU.requestInterrupt(4); // Timer IRQ
+		m_CPU->requestInterrupt(4); // Timer IRQ
 	}
 }
 

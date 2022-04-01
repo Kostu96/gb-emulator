@@ -1,20 +1,22 @@
-#include "cpu.h"
-#include "memory_map.h"
+#include "gameboy_fixture.h"
 
-#include <gtest/gtest.h>
+#include <sstream>
 
-struct GameBoyFixture :
-	public testing::Test
-{
-	void SetUp() override {
-		pCPU = new CPU{ *pMemoryMap };
-		pMemoryMap = new MemoryMap{ *pCPU };
+using BlarggTests = GameBoyFixture;
+
+TEST_F(BlarggTests, InterruptesTest) {
+	memoryMap.insertCartridge("third_party/tests/gb-test-roms/cpu_instrs/individual/02-interrupts.gb");
+
+	std::stringstream ss;
+	size_t cycles = 134217728;
+	while (cycles--) {
+		cpu.doCycles(4);
+
+		if (memoryMap.load8(0xFF02) == 0x81) {
+			uint8_t data = memoryMap.load8(0xFF01);
+			if (data) ss << data;
+		}
 	}
 
-	CPU* pCPU = nullptr;
-	MemoryMap* pMemoryMap = nullptr;
-};
-
-TEST_F(GameBoyFixture, BlarggTest) {
-
+	std::string result = ss.str();
 }

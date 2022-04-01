@@ -15,8 +15,7 @@ static AddressRange PPU_RANGE{       0xFF40, 0x000C };
 static AddressRange RESERVED2_RANGE{ 0xFF4C, 0x0033 };
 static AddressRange HRAM_RANGE{      0xFF80, 0x0080 };
 
-MemoryMap::MemoryMap(CPU& cpu) :
-	m_timer{ cpu }
+MemoryMap::MemoryMap()
 {
 	m_WRAM = new uint8_t[WRAM_SIZE];
 }
@@ -24,6 +23,11 @@ MemoryMap::MemoryMap(CPU& cpu) :
 MemoryMap::~MemoryMap()
 {
 	delete[] m_WRAM;
+}
+
+void MemoryMap::connect(CPU& cpu)
+{
+	m_timer.connect(cpu);
 }
 
 uint8_t MemoryMap::load8(uint16_t address) const
@@ -41,6 +45,9 @@ uint8_t MemoryMap::load8(uint16_t address) const
 
 	if (OAM_RANGE.contains(address, offset))
 		return m_PPU.load8OAM(offset);
+
+	if (IO_RANGE.contains(address, offset))
+		return m_IO.load8(offset);
 
 	if (PPU_RANGE.contains(address, offset))
 		return m_PPU.load8(offset);

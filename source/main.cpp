@@ -22,11 +22,12 @@ public:
 			               std::max((SCALE * 144), ((23 + 24 * 8) * SCALE)) },
 			"GameBoy emulator",
 			sf::Style::Close
-		},
-		m_memoryMap{ m_CPU },
-		m_CPU { m_memoryMap }
+		}
 	{
 		m_window.setVerticalSyncEnabled(true);
+
+		m_CPU.connect(m_memoryMap);
+		m_memoryMap.connect(m_CPU);
 
 		//m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/cpu_instrs/cpu_instrs.gb");
 		//m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/cpu_instrs/individual/01-special.gb");

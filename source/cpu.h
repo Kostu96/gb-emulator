@@ -1,6 +1,7 @@
 #pragma once
+#include "base.h"
+
 #include <cpp-common/non_copyable.h>
-#include <cstdint>
 
 class MemoryMap;
 
@@ -8,12 +9,13 @@ class CPU :
 	public NonCopyable
 {
 public:
-	CPU(MemoryMap& memoryMap);
+	CPU();
 
+	void connect(MemoryMap& memoryMap);
 	void reset();
 	void doCycles(size_t cycles);
 	void requestInterrupt(uint8_t interrupt);
-private:
+PRIVATE:
 	void executeInstruction(uint8_t opcode);
 	void executeInstructionStandard(uint8_t opcode);
 	void executeInstructionCBPrefix(uint8_t opcode);
@@ -137,5 +139,5 @@ private:
 	bool m_isHalted;
 
 	uint8_t(CPU::* m_readByteFunc)(uint16_t);
-	MemoryMap& m_memoryMap;
+	MemoryMap* m_memoryMap;
 };

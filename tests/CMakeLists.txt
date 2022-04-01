@@ -1,5 +1,7 @@
 set(SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/blargg_tests.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/cpu_tests.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/gameboy_fixture.h
     ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
 )
 
@@ -9,6 +11,10 @@ add_executable(${TARGET_NAME_TESTS}
 
 target_include_directories(${TARGET_NAME_TESTS} PRIVATE
 	${GTEST_INCLUDE_DIR}
+)
+
+target_compile_definitions(${TARGET_NAME_TESTS} PRIVATE
+	GB_TESTS
 )
 
 target_link_libraries(${TARGET_NAME_TESTS}
