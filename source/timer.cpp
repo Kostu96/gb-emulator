@@ -6,7 +6,7 @@
 Timer::Timer()
 {
 	// TODO: reset timers when gameboy resets
-	m_DIV = 0x0;
+	m_DIV = 0xABCC;
 	m_TIMA = 0;
 	m_TMA = 0;
 	m_TAC = 0xF8;
@@ -48,11 +48,4 @@ void Timer::store8(uint16_t address, uint8_t byte)
 {
 	if (address == 0) m_DIV = 0;
 	else m_rawData[address + 1] = byte;
-}
-
-void Timer::handoffReset()
-{
-	m_DIV = 0xABCC;
-	m_TIMA = 0;
-	m_TMA = 0;
 }

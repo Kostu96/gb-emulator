@@ -34,6 +34,5 @@ set(TARGET_NAME_LIB ${TARGET_NAME}_lib)
 set(TARGET_NAME_TESTS ${TARGET_NAME}_tests)
 
 add_subdirectory(third_party)
-add_subdirectory(tools/bootloader_generator)
 add_subdirectory(source)
 add_subdirectory(tests)
