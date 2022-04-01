@@ -15,9 +15,6 @@ public:
 
     uint8_t load8(uint16_t address) const;
     void store8(uint16_t address, uint8_t byte);
-    
-    // WA
-    void handoffReset();
 private:
     union {
         struct {

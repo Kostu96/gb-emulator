@@ -10,6 +10,8 @@ public:
     
     uint8_t load8(uint16_t address) const;
     void store8(uint16_t address, uint8_t byte);
+
+    const char* getBuffer();
 private:
     union {
         struct {
@@ -19,4 +21,6 @@ private:
         };
         uint8_t m_rawData[3];
     };
+    char m_buffer[512];
+    size_t m_bufferIndex = 0;
 };

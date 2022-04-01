@@ -16,27 +16,27 @@ void CPU::connect(MemoryMap& memoryMap)
 
 void CPU::reset()
 {
-	F.byte = 0x0;
-	PC = 0x0;
+	AF = 0x018F;
+	BC = 0x0013;
+	DE = 0x00D8;
+	HL = 0x014D;
+	PC = 0x100;
+	SP = 0xFFE;
 
 	m_interruptEnables.byte = 0x0;
-	m_IRQs.byte = 0xE0;
+	m_IRQs.byte = 0xE1;
 	m_interruptsMasterEnable = false;
 	m_EICalled = false;
 
-	m_currentInstructionCyclesLeft = 0; // Let's say that reset takes 4 clock cycles
+	m_currentInstructionCyclesLeft = 0;
 	m_isCBInstruction = false;
 	m_isHalted = false;
-
-	m_readByteFunc = &CPU::readByteInternal;
 }
 
 void CPU::doCycles(size_t cycles)
 {
 	if (!m_isHalted) {
 		while (cycles--) {
-			//if (PC == 0x100) __debugbreak();
-
 			m_memoryMap->getTimer().tick();
 			m_memoryMap->getPPU().tick();
 	
@@ -82,7 +82,7 @@ void CPU::doCycles(size_t cycles)
 
 			if (m_currentInstructionCyclesLeft == 0) {
 
-				uint8_t opcode = getImm8();
+				uint8_t opcode = readByte(PC++);
 				executeInstruction(opcode);
 			}
 
@@ -117,15 +117,15 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x03: INCRR(BC); break;
 	case 0x04: INCR(B); break;
 	case 0x05: DECR(B); break;
-	case 0x06: LDR(B, getImm8()); break;
+	case 0x06: LDR(B, readByte(PC++)); break;
 	case 0x07: RLCA(); break;
 	case 0x08: m_currentInstructionCyclesLeft += 8; LDM(getImm16(), SP); break;
 	case 0x09: ADDHL(BC); break;
-	case 0x0A: LDR(A, (this->*m_readByteFunc)(BC)); break;
+	case 0x0A: LDR(A, readByte(BC)); break;
 	case 0x0B: DECRR(BC); break;
 	case 0x0C: INCR(C); break;
 	case 0x0D: DECR(C); break;
-	case 0x0E: LDR(C, getImm8()); break;
+	case 0x0E: LDR(C, readByte(PC++)); break;
 	case 0x0F: RRCA(); break;
 	case 0x10: __debugbreak(); break; //TODO: stop should have 0x10 0x00 otherwise it's undefined opode
 	case 0x11: LDRR(DE, getImm16()); break;
@@ -133,15 +133,15 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x13: INCRR(DE); break;
 	case 0x14: INCR(D); break;
 	case 0x15: DECR(D); break;
-	case 0x16: LDR(D, getImm8()); break;
+	case 0x16: LDR(D, readByte(PC++)); break;
 	case 0x17: RLA(); break;
 	case 0x18: JR(true); break;
 	case 0x19: ADDHL(DE); break;
-	case 0x1A: LDR(A, (this->*m_readByteFunc)(DE)); break;
+	case 0x1A: LDR(A, readByte(DE)); break;
 	case 0x1B: DECRR(DE); break;
 	case 0x1C: INCR(E); break;
 	case 0x1D: DECR(E); break;
-	case 0x1E: LDR(E, getImm8()); break;
+	case 0x1E: LDR(E, readByte(PC++)); break;
 	case 0x1F: RRA(); break;
 	case 0x20: JR(!F.zeroFlag); break;
 	case 0x21: LDRR(HL, getImm16()); break;
@@ -149,15 +149,15 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x23: INCRR(HL); break;
 	case 0x24: INCR(H); break;
 	case 0x25: DECR(H); break;
-	case 0x26: LDR(H, getImm8()); break;
+	case 0x26: LDR(H, readByte(PC++)); break;
 	case 0x27: DAA(); break;
 	case 0x28: JR(F.zeroFlag); break;
 	case 0x29: ADDHL(HL); break;
-	case 0x2A: LDR(A, (this->*m_readByteFunc)(HL++)); break;
+	case 0x2A: LDR(A, readByte(HL++)); break;
 	case 0x2B: DECRR(HL); break;
 	case 0x2C: INCR(L); break;
 	case 0x2D: DECR(L); break;
-	case 0x2E: LDR(L, getImm8()); break;
+	case 0x2E: LDR(L, readByte(PC++)); break;
 	case 0x2F: CPL(); break;
 	case 0x30: JR(!F.carryFlag); break;
 	case 0x31: LDRR(SP, getImm16()); break;
@@ -165,14 +165,14 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x33: INCRR(SP); break;
 	case 0x34: INCR(*getMemoryLocation(HL)); break;
 	case 0x35: DECR(*getMemoryLocation(HL)); break;
-	case 0x36: LDM(HL, getImm8()); break;
+	case 0x36: LDM(HL, readByte(PC++)); break;
 	case 0x37: SCF(); break;
 	case 0x38: JR(F.carryFlag); break;
 	case 0x39: ADDHL(SP); break;
-	case 0x3A: LDR(A, (this->*m_readByteFunc)(HL--)); break;
+	case 0x3A: LDR(A, readByte(HL--)); break;
 	case 0x3C: INCR(A); break;
 	case 0x3D: DECR(A); break;
-	case 0x3E: LDR(A, getImm8()); break;
+	case 0x3E: LDR(A, readByte(PC++)); break;
 	case 0x3F: CCF(); break;
 	case 0x40: LDR(B, B); break;
 	case 0x41: LDR(B, C); break;
@@ -180,7 +180,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x43: LDR(B, E); break;
 	case 0x44: LDR(B, H); break;
 	case 0x45: LDR(B, L); break;
-	case 0x46: LDR(B, (this->*m_readByteFunc)(HL)); break;
+	case 0x46: LDR(B, readByte(HL)); break;
 	case 0x47: LDR(B, A); break;
 	case 0x48: LDR(C, B); break;
 	case 0x49: LDR(C, C); break;
@@ -188,7 +188,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x4B: LDR(C, E); break;
 	case 0x4C: LDR(C, H); break;
 	case 0x4D: LDR(C, L); break;
-	case 0x4E: LDR(C, (this->*m_readByteFunc)(HL)); break;
+	case 0x4E: LDR(C, readByte(HL)); break;
 	case 0x4F: LDR(C, A); break;
 	case 0x50: LDR(D, B); break;
 	case 0x51: LDR(D, C); break;
@@ -196,7 +196,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x53: LDR(D, E); break;
 	case 0x54: LDR(D, H); break;
 	case 0x55: LDR(D, L); break;
-	case 0x56: LDR(D, (this->*m_readByteFunc)(HL)); break;
+	case 0x56: LDR(D, readByte(HL)); break;
 	case 0x57: LDR(A, L); break;
 	case 0x58: LDR(E, B); break;
 	case 0x59: LDR(E, C); break;
@@ -204,7 +204,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x5B: LDR(E, E); break;
 	case 0x5C: LDR(E, H); break;
 	case 0x5D: LDR(E, L); break;
-	case 0x5E: LDR(E, (this->*m_readByteFunc)(HL)); break;
+	case 0x5E: LDR(E, readByte(HL)); break;
 	case 0x5F: LDR(E, H); break;
 	case 0x60: LDR(H, B); break;
 	case 0x61: LDR(H, C); break;
@@ -212,7 +212,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x63: LDR(H, E); break;
 	case 0x64: LDR(H, H); break;
 	case 0x65: LDR(H, L); break;
-	case 0x66: LDR(H, (this->*m_readByteFunc)(HL)); break;
+	case 0x66: LDR(H, readByte(HL)); break;
 	case 0x67: LDR(H, A); break;
 	case 0x68: LDR(L, B); break;
 	case 0x69: LDR(L, C); break;
@@ -220,7 +220,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x6B: LDR(L, E); break;
 	case 0x6C: LDR(L, H); break;
 	case 0x6D: LDR(L, L); break;
-	case 0x6E: LDR(L, (this->*m_readByteFunc)(HL)); break;
+	case 0x6E: LDR(L, readByte(HL)); break;
 	case 0x6F: LDR(L, A); break;
 	case 0x70: LDM(HL, B); break;
 	case 0x71: LDM(HL, C); break;
@@ -236,7 +236,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x7B: LDR(A, E); break;
 	case 0x7C: LDR(A, H); break;
 	case 0x7D: LDR(A, L); break;
-	case 0x7E: LDR(A, (this->*m_readByteFunc)(HL)); break;
+	case 0x7E: LDR(A, readByte(HL)); break;
 	case 0x7F: LDR(A, A); break;
 	case 0x80: ADD(B); break;
 	case 0x81: ADD(C); break;
@@ -244,7 +244,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x83: ADD(E); break;
 	case 0x84: ADD(H); break;
 	case 0x85: ADD(L); break;
-	case 0x86: ADD((this->*m_readByteFunc)(HL)); break;
+	case 0x86: ADD(readByte(HL)); break;
 	case 0x87: ADD(A); break;
 	case 0x88: ADC(B); break;
 	case 0x89: ADC(C); break;
@@ -252,7 +252,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x8B: ADC(E); break;
 	case 0x8C: ADC(H); break;
 	case 0x8D: ADC(L); break;
-	case 0x8E: ADC((this->*m_readByteFunc)(HL)); break;
+	case 0x8E: ADC(readByte(HL)); break;
 	case 0x8F: ADC(A); break;
 	case 0x90: SUB(B); break;
 	case 0x91: SUB(C); break;
@@ -260,7 +260,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x93: SUB(E); break;
 	case 0x94: SUB(H); break;
 	case 0x95: SUB(L); break;
-	case 0x96: SUB((this->*m_readByteFunc)(HL)); break;
+	case 0x96: SUB(readByte(HL)); break;
 	case 0x97: SUB(A); break;
 	case 0x98: SBC(B); break;
 	case 0x99: SBC(C); break;
@@ -268,7 +268,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x9B: SBC(E); break;
 	case 0x9C: SBC(H); break;
 	case 0x9D: SBC(L); break;
-	case 0x9E: SBC((this->*m_readByteFunc)(HL)); break;
+	case 0x9E: SBC(readByte(HL)); break;
 	case 0x9F: SBC(A); break;
 	case 0xA0: AND(B); break;
 	case 0xA1: AND(C); break;
@@ -276,7 +276,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0xA3: AND(E); break;
 	case 0xA4: AND(H); break;
 	case 0xA5: AND(L); break;
-	case 0xA6: AND((this->*m_readByteFunc)(HL)); break;
+	case 0xA6: AND(readByte(HL)); break;
 	case 0xA7: AND(A); break;
 	case 0xA8: XOR(B); break;
 	case 0xA9: XOR(C); break;
@@ -284,7 +284,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0xAB: XOR(E); break;
 	case 0xAC: XOR(H); break;
 	case 0xAD: XOR(L); break;
-	case 0xAE: XOR((this->*m_readByteFunc)(HL)); break;
+	case 0xAE: XOR(readByte(HL)); break;
 	case 0xAF: XOR(A); break;
 	case 0xB0: OR(B); break;
 	case 0xB1: OR(C); break;
@@ -292,7 +292,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0xB3: OR(E); break;
 	case 0xB4: OR(H); break;
 	case 0xB5: OR(L); break;
-	case 0xB6: OR((this->*m_readByteFunc)(HL)); break;
+	case 0xB6: OR(readByte(HL)); break;
 	case 0xB7: OR(A); break;
 	case 0xB8: CP(B); break;
 	case 0xB9: CP(C); break;
@@ -300,7 +300,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0xBB: CP(E); break;
 	case 0xBC: CP(H); break;
 	case 0xBD: CP(L); break;
-	case 0xBE: CP((this->*m_readByteFunc)(HL)); break;
+	case 0xBE: CP(readByte(HL)); break;
 	case 0xBF: CP(A); break;
 	case 0xC0: RET(!F.zeroFlag); break;
 	case 0xC1: BC = popReg16(); break;
@@ -308,7 +308,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0xC3: JP(true); break;
 	case 0xC4: CALL(!F.zeroFlag); break;
 	case 0xC5: m_currentInstructionCyclesLeft += 4; pushReg16(BC); break;
-	case 0xC6: ADD(getImm8()); break;
+	case 0xC6: ADD(readByte(PC++)); break;
 	case 0xC7: RST(0x00); break;
 	case 0xC8: RET(F.zeroFlag); break;
 	case 0xC9: RET(true); break;
@@ -316,44 +316,44 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0xCB: m_isCBInstruction = true; break;
 	case 0xCC: CALL(F.zeroFlag); break;
 	case 0xCD: CALL(true); break;
-	case 0xCE: ADC(getImm8()); break;
+	case 0xCE: ADC(readByte(PC++)); break;
 	case 0xCF: RST(0x08); break;
 	case 0xD0: RET(!F.carryFlag); break;
 	case 0xD1: DE = popReg16(); break;
 	case 0xD2: JP(!F.carryFlag); break;
 	case 0xD4: CALL(!F.carryFlag); break;
 	case 0xD5: m_currentInstructionCyclesLeft += 4; pushReg16(DE); break;
-	case 0xD6: SUB(getImm8()); break;
+	case 0xD6: SUB(readByte(PC++)); break;
 	case 0xD7: RST(0x10); break;
 	case 0xD8: RET(F.carryFlag); break;
 	case 0xD9: m_interruptsMasterEnable = true; RET(true); break;
 	case 0xDA: JP(F.carryFlag); break;
 	case 0xDC: CALL(F.carryFlag); break;
-	case 0xDE: SBC(getImm8()); break;
+	case 0xDE: SBC(readByte(PC++)); break;
 	case 0xDF: RST(0x18); break;
-	case 0xE0: LDM(0xFF00 | getImm8(), A); break;
+	case 0xE0: LDM(0xFF00 | readByte(PC++), A); break;
 	case 0xE1: HL = popReg16(); break;
 	case 0xE2: LDM(0xFF00 | C, A); break;
 	case 0xE5: m_currentInstructionCyclesLeft += 4; pushReg16(HL); break;
-	case 0xE6: AND(getImm8()); break;
+	case 0xE6: AND(readByte(PC++)); break;
 	case 0xE7: RST(0x20); break;
 	case 0xE8: ADDSP(); break;
 	case 0xE9: JPHL(); break;
 	case 0xEA: LDM(getImm16(), A); break;
-	case 0xEE: XOR(getImm8()); break;
+	case 0xEE: XOR(readByte(PC++)); break;
 	case 0xEF: RST(0x28); break;
-	case 0xF0: LDR(A, (this->*m_readByteFunc)(0xFF00 | getImm8())); break;
-	case 0xF1: AF = popReg16(); F.alwaysZero = 0; break;
-	case 0xF2: LDR(A, (this->*m_readByteFunc)(0xFF00 | C)); break;
+	case 0xF0: LDR(A, readByte(0xFF00 | readByte(PC++))); break;
+	case 0xF1: AF = popReg16(); F.notUsed = 0xF; break;
+	case 0xF2: LDR(A, readByte(0xFF00 | C)); break;
 	case 0xF3: m_interruptsMasterEnable = false; break;
 	case 0xF5: m_currentInstructionCyclesLeft += 4; pushReg16(AF); break;
-	case 0xF6: OR(getImm8()); break;
+	case 0xF6: OR(readByte(PC++)); break;
 	case 0xF7: RST(0x30); break;
-	case 0xF8: m_currentInstructionCyclesLeft += 4; LDRR(HL, SP + getImm8()); break;
+	case 0xF8: m_currentInstructionCyclesLeft += 4; LDRR(HL, SP + readByte(PC++)); break;
 	case 0xF9: m_currentInstructionCyclesLeft += 4; LDRR(SP, HL); break;
-	case 0xFA: LDR(A, (this->*m_readByteFunc)(getImm16())); break;
+	case 0xFA: LDR(A, readByte(getImm16())); break;
 	case 0xFB: m_EICalled = true; break;
-	case 0xFE: CP(getImm8()); break;
+	case 0xFE: CP(readByte(PC++)); break;
 	case 0xFF: RST(0x38); break;
 	default: abort();
 	}
@@ -387,16 +387,6 @@ void CPU::executeInstructionCBPrefix(uint8_t opcode)
 	}
 }
 
-#include "bootloader.inl"
-
-uint8_t CPU::readByteInternal(uint16_t address)
-{
-	if (address < 0x100)
-		return internalROM[address];
-
-	return readByte(address);
-}
-
 uint8_t CPU::readByte(uint16_t address)
 {
 	m_currentInstructionCyclesLeft += 4;
@@ -408,6 +398,32 @@ uint8_t CPU::readByte(uint16_t address)
 		return m_interruptEnables.byte;
 	default:
 		return m_memoryMap->load8(address);
+	}
+}
+
+uint16_t CPU::getImm16()
+{
+	uint16_t value = readByte(PC + 1);
+	value <<= 8;
+	value |= readByte(PC);
+	PC += 2;
+
+	return value;
+}
+
+void CPU::storeByte(uint16_t address, uint8_t byte)
+{
+	m_currentInstructionCyclesLeft += 4;
+
+	switch (address) {
+	case 0xFF0F:
+		m_IRQs.byte = byte;
+		break;
+	case 0xFFFF:
+		m_interruptEnables.byte = byte;
+		break;
+	default:
+		m_memoryMap->store8(address, byte);
 	}
 }
 
@@ -425,48 +441,11 @@ uint8_t* CPU::getMemoryLocation(uint16_t address)
 	}
 }
 
-void CPU::storeByte(uint16_t address, uint8_t byte)
-{
-	m_currentInstructionCyclesLeft += 4;
-
-	switch (address) {
-	case 0xFF50:
-		// Internal ROM hand-off
-		m_readByteFunc = &CPU::readByte;
-		m_IRQs.byte = 0xE1;
-		m_memoryMap->getTimer().handoffReset();
-		break;
-	case 0xFF0F:
-		m_IRQs.byte = byte;
-		break;
-	case 0xFFFF:
-		m_interruptEnables.byte = byte;
-		break;
-	default:
-		m_memoryMap->store8(address, byte);
-	}	
-}
-
-uint8_t CPU::getImm8()
-{
-	return (this->*m_readByteFunc)(PC++);
-}
-
-uint16_t CPU::getImm16()
-{
-	uint16_t value = (this->*m_readByteFunc)(PC + 1);
-	value <<= 8;
-	value |= (this->*m_readByteFunc)(PC);
-	PC += 2;
-	
-	return value;
-}
-
 uint16_t CPU::popReg16()
 {
-	uint16_t value = (this->*m_readByteFunc)(SP + 1);
+	uint16_t value = readByte(SP + 1);
 	value <<= 8;
-	value |= (this->*m_readByteFunc)(SP);
+	value |= readByte(SP);
 	SP += 2;
 	
 	return value;
@@ -516,7 +495,7 @@ void CPU::ADDHL(uint16_t value)
 void CPU::ADDSP()
 {
 	m_currentInstructionCyclesLeft += 4;
-	uint8_t value = getImm8();
+	uint8_t value = readByte(PC++);
 	uint32_t result = SP + value;
 	uint16_t result12bit = (SP & 0xFFF) + (value & 0xFFF);
 	SP = result;
@@ -577,30 +556,15 @@ void CPU::CPL()
 
 void CPU::DAA()
 {
-	uint8_t adjust = 0;
-	uint8_t NHCFlags = (F.byte >> 4) & 7;
-	switch (NHCFlags) {
-	case 0b000:
-		if ((A & 0xF) > 9) adjust = 6;
-		break;
-	case 0b001:
-		if ((A & 0xF) <= 3) adjust = 6;
-		break;
-	case 0b010:
-		break;
-	case 0b011:
-		break;
-	case 0b100:
-		break;
-	case 0b101:
-		break;
-	case 0b110:
-		break;
-	case 0b111:
-		break;
+	uint8_t u = 0;
+	if (F.halfCarryFlag || (!F.subtractFlag && (A & 0xF) > 9)) {
+		u = 6;
 	}
-
-	A += adjust;
+	if (F.carryFlag || (!F.subtractFlag && A > 0x99)) {
+		u |= 0x60;
+		F.carryFlag = 1;
+	}
+	A += F.subtractFlag ? -u : u;
 	F.zeroFlag = (A == 0);
 	F.halfCarryFlag = 0;
 }
@@ -651,7 +615,7 @@ void CPU::JPHL()
 
 void CPU::JR(bool flag)
 {
-	int8_t signedByte = getImm8();
+	int8_t signedByte = readByte(PC++);
 	if (flag) {
 		m_currentInstructionCyclesLeft += 4;
 		PC += signedByte;
@@ -844,6 +808,6 @@ void CPU::SWAP(uint8_t& reg)
 void CPU::XOR(uint8_t value)
 {
 	A ^= value;
-	F.byte = 0;
+	F.byte = 0x0F;
 	F.zeroFlag = A == 0;
 }

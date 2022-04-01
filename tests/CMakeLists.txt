@@ -3,6 +3,7 @@ set(SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/cpu_tests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/gameboy_fixture.h
     ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/mooneye_tests.cpp
 )
 
 add_executable(${TARGET_NAME_TESTS}

@@ -1,13 +1,4 @@
 ### Configure emulator library
-# Generate bootloader
-set(BOOTLOADER_FILE ${CMAKE_CURRENT_BINARY_DIR}/generated_sources/bootloader.inl)
-
-add_custom_command(
-	OUTPUT ${BOOTLOADER_FILE}
-	COMMAND bootloader_generator ${CMAKE_SOURCE_DIR}/assets/DMG_ROM.bin ${BOOTLOADER_FILE} ${CMAKE_SOURCE_DIR}/assets/bootloader_patches
-	DEPENDS bootloader_generator
-)
-
 set(SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/base.h
     ${CMAKE_CURRENT_SOURCE_DIR}/cartridge.cpp
@@ -25,15 +16,10 @@ set(SOURCE_FILES
 )
 
 add_library(${TARGET_NAME_LIB} STATIC
-	${BOOTLOADER_FILE}
 	${SOURCE_FILES}
 )
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} PREFIX source FILES ${SOURCE_FILES})
-
-target_include_directories(${TARGET_NAME_LIB} PRIVATE
-	${CMAKE_CURRENT_BINARY_DIR}/generated_sources
-)
 
 target_include_directories(${TARGET_NAME_LIB} PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}

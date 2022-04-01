@@ -20,11 +20,9 @@ PRIVATE:
 	void executeInstructionStandard(uint8_t opcode);
 	void executeInstructionCBPrefix(uint8_t opcode);
 
-	uint8_t readByteInternal(uint16_t address);
 	uint8_t readByte(uint16_t address);
-	uint8_t* getMemoryLocation(uint16_t address);
 	void storeByte(uint16_t address, uint8_t byte);
-	uint8_t getImm8();
+	uint8_t* getMemoryLocation(uint16_t address);
 	uint16_t getImm16();
 	uint16_t popReg16();
 	void pushReg16(uint16_t reg);
@@ -74,7 +72,7 @@ PRIVATE:
 
 	union FlagsRegister {
 		struct {
-			uint8_t alwaysZero    : 4; // 0-3
+			uint8_t notUsed       : 4; // 0-3
 			uint8_t carryFlag     : 1; // 4
 			uint8_t halfCarryFlag : 1; // 5
 			uint8_t subtractFlag  : 1; // 6
@@ -138,6 +136,5 @@ PRIVATE:
 	bool m_isCBInstruction;
 	bool m_isHalted;
 
-	uint8_t(CPU::* m_readByteFunc)(uint16_t);
 	MemoryMap* m_memoryMap;
 };
