@@ -32,7 +32,7 @@ public:
 		//m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/cpu_instrs/cpu_instrs.gb");
 		//m_memoryMap.insertCartridge("third_party/tests/gb-test-roms/instr_timing/instr_timing.gb");
 		//m_memoryMap.insertCartridge("assets/test_roms/dmg-acid2.gb");
-		m_memoryMap.insertCartridge("E:/Retro/GameBoy/tetris.gb");
+		m_memoryMap.getCartridge().loadFromFile("E:/Retro/GameBoy/tetris.gb");
 	}
 
 	void run()

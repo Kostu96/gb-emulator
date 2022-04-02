@@ -12,7 +12,8 @@ public:
     uint8_t load8(uint16_t address) const;
     void store8(uint16_t address, uint8_t byte);
 
-    void insert(const char* filename);
+    void loadFromMemory(uint8_t* data, size_t size);
+    void loadFromFile(const char* filename);
 private:
     struct Header {
         uint8_t entryPoint[4];      // 0x100 - 0x103

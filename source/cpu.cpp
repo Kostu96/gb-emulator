@@ -119,7 +119,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x05: DECR(B); break;
 	case 0x06: LDR(B, readByte(PC++)); break;
 	case 0x07: RLCA(); break;
-	case 0x08: m_currentInstructionCyclesLeft += 8; LDM(getImm16(), SP); break;
+	case 0x08: LDMM(getImm16(), SP); break;
 	case 0x09: ADDHL(BC); break;
 	case 0x0A: LDR(A, readByte(BC)); break;
 	case 0x0B: DECRR(BC); break;
@@ -197,7 +197,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x54: LDR(D, H); break;
 	case 0x55: LDR(D, L); break;
 	case 0x56: LDR(D, readByte(HL)); break;
-	case 0x57: LDR(A, L); break;
+	case 0x57: LDR(D, A); break;
 	case 0x58: LDR(E, B); break;
 	case 0x59: LDR(E, C); break;
 	case 0x5A: LDR(E, D); break;
@@ -205,7 +205,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x5C: LDR(E, H); break;
 	case 0x5D: LDR(E, L); break;
 	case 0x5E: LDR(E, readByte(HL)); break;
-	case 0x5F: LDR(E, H); break;
+	case 0x5F: LDR(E, A); break;
 	case 0x60: LDR(H, B); break;
 	case 0x61: LDR(H, C); break;
 	case 0x62: LDR(H, D); break;
@@ -349,7 +349,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0xF5: m_currentInstructionCyclesLeft += 4; pushReg16(AF); break;
 	case 0xF6: OR(readByte(PC++)); break;
 	case 0xF7: RST(0x30); break;
-	case 0xF8: m_currentInstructionCyclesLeft += 4; LDRR(HL, SP + readByte(PC++)); break;
+	case 0xF8: LDHLSPImm(); break;
 	case 0xF9: m_currentInstructionCyclesLeft += 4; LDRR(SP, HL); break;
 	case 0xFA: LDR(A, readByte(getImm16())); break;
 	case 0xFB: m_EICalled = true; break;
@@ -622,9 +622,21 @@ void CPU::JR(bool flag)
 	}
 }
 
+void CPU::LDHLSPImm()
+{
+	__debugbreak();
+	LDRR(HL, SP + readByte(PC++));
+}
+
 void CPU::LDM(uint16_t address, uint8_t value)
 {
 	storeByte(address, value);
+}
+
+void CPU::LDMM(uint16_t address, uint16_t value)
+{
+	storeByte(address, value);
+	storeByte(address + 1, value >> 8);
 }
 
 void CPU::LDR(uint8_t& reg, uint8_t value)
