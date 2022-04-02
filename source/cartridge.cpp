@@ -84,7 +84,15 @@ void Cartridge::store8(uint16_t address, uint8_t byte)
 	//__debugbreak();
 }
 
-void Cartridge::insert(const char* filename)
+void Cartridge::loadFromMemory(uint8_t* data, size_t size)
+{
+	m_size = size;
+	delete[] m_data;
+	m_data = new uint8_t[m_size];
+	memcpy_s(m_data, m_size, data, size);
+}
+
+void Cartridge::loadFromFile(const char* filename)
 {
 	if (!readFile(filename, nullptr, m_size, true)) {
 		std::cerr << "Failed to read size of cartridge ROM file!\n";

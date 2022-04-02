@@ -45,7 +45,9 @@ PRIVATE:
 	void JP(bool flag);
 	void JPHL();
 	void JR(bool flag);
+	void LDHLSPImm();
 	void LDM(uint16_t address, uint8_t value);
+	void LDMM(uint16_t address, uint16_t value);
 	void LDR(uint8_t& reg, uint8_t value);
 	void LDRR(uint16_t& reg, uint16_t value);
 	void OR(uint8_t value);

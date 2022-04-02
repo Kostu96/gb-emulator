@@ -30,15 +30,16 @@ public:
 
 	void connect(CPU& cpu);
 
+	Cartridge& getCartridge() { return m_cartridge; }
 	PPU& getPPU() { return m_PPU; }
 	IO& getIO() { return m_IO; }
 	Timer& getTimer() { return m_timer; }
+	uint8_t* getWRAM() { return m_WRAM; }
+	uint8_t* getHRAM() { return m_HRAM; }
 
 	uint8_t load8(uint16_t address) const;
 	uint8_t* getMemoryLocation(uint16_t address);
 	void store8(uint16_t address, uint8_t byte);
-
-	void insertCartridge(const char* filename) { m_cartridge.insert(filename); }
 private:
 	Cartridge m_cartridge;
 	PPU m_PPU;
