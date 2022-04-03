@@ -112,7 +112,6 @@ TEST_F(CPUTests16bitMoves, PUSH_BCTest)
 {
 	dummyROM[0x100] = 0xC5;
 	cpu.BC = 0xDEAD;
-	cpu.SP = 0xFFFE;
 	memoryMap.getCartridge().loadFromMemory(dummyROM, sizeof(dummyROM));
 
 	CPUState preExecutionState = dumpCPUState();
@@ -150,7 +149,6 @@ TEST_F(CPUTests16bitMoves, PUSH_DETest)
 {
 	dummyROM[0x100] = 0xD5;
 	cpu.DE = 0xDEAD;
-	cpu.SP = 0xFFFE;
 	memoryMap.getCartridge().loadFromMemory(dummyROM, sizeof(dummyROM));
 
 	CPUState preExecutionState = dumpCPUState();
@@ -188,7 +186,6 @@ TEST_F(CPUTests16bitMoves, PUSH_HLTest)
 {
 	dummyROM[0x100] = 0xE5;
 	cpu.HL = 0xDEAD;
-	cpu.SP = 0xFFFE;
 	memoryMap.getCartridge().loadFromMemory(dummyROM, sizeof(dummyROM));
 
 	CPUState preExecutionState = dumpCPUState();
@@ -226,7 +223,6 @@ TEST_F(CPUTests16bitMoves, PUSH_AFTest)
 {
 	dummyROM[0x100] = 0xF5;
 	cpu.AF= 0xDEAD;
-	cpu.SP = 0xFFFE;
 	memoryMap.getCartridge().loadFromMemory(dummyROM, sizeof(dummyROM));
 
 	CPUState preExecutionState = dumpCPUState();
@@ -247,6 +243,7 @@ TEST_F(CPUTests16bitMoves, LDRR_HL_SPPlusImmediateTest)
 	dummyROM[0x100] = 0xF8;
 	dummyROM[0x101] = 0x42;
 	cpu.SP = 0xDE00;
+	cpu.F.byte &= 0x0F;
 	memoryMap.getCartridge().loadFromMemory(dummyROM, sizeof(dummyROM));
 
 	CPUState preExecutionState = dumpCPUState();
@@ -255,7 +252,6 @@ TEST_F(CPUTests16bitMoves, LDRR_HL_SPPlusImmediateTest)
 
 	preExecutionState.PC += 2;
 	preExecutionState.HL = 0xDE42;
-	preExecutionState.AF &= 0xFF00;
 	preExecutionState.AF |= 0x000F;
 
 	compareCPUStates(preExecutionState, postExecutionState);

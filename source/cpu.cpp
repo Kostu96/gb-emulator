@@ -21,7 +21,7 @@ void CPU::reset()
 	DE = 0x00D8;
 	HL = 0x014D;
 	PC = 0x100;
-	SP = 0xFFE;
+	SP = 0xFFFE;
 
 	m_interruptEnables.byte = 0x0;
 	m_IRQs.byte = 0xE1;
@@ -41,39 +41,39 @@ void CPU::doCycles(size_t cycles)
 			m_memoryMap->getPPU().tick();
 	
 			// TODO: interrupt should be connected to m_currentInstructionCyclesLeft
-			if (m_interruptsMasterEnable) {
-				// TODO: move this code swh
-				if (m_interruptEnables.fields.VBlank & m_IRQs.fields.VBlank) {
-					m_currentInstructionCyclesLeft += 8;
-					m_interruptsMasterEnable = false;
-					m_IRQs.fields.VBlank = 0;
-					RST(0x40);
-				}
-				else if (m_interruptEnables.fields.LCDStat & m_IRQs.fields.LCDStat) {
-					m_currentInstructionCyclesLeft += 8;
-					m_interruptsMasterEnable = false;
-					m_IRQs.fields.LCDStat = 0;
-					RST(0x48);
-				}
-				else if (m_interruptEnables.fields.timer & m_IRQs.fields.timer) {
-					m_currentInstructionCyclesLeft += 8;
-					m_interruptsMasterEnable = false;
-					m_IRQs.fields.timer = 0;
-					RST(0x50);
-				}
-				else if (m_interruptEnables.fields.serial & m_IRQs.fields.serial) {
-					m_currentInstructionCyclesLeft += 8;
-					m_interruptsMasterEnable = false;
-					m_IRQs.fields.serial = 0;
-					RST(0x58);
-				}
-				else if (m_interruptEnables.fields.joypad & m_IRQs.fields.joypad) {
-					m_currentInstructionCyclesLeft += 8;
-					m_interruptsMasterEnable = false;
-					m_IRQs.fields.joypad = 0;
-					RST(0x60);
-				}
-			}
+			//if (m_interruptsMasterEnable) {
+			//	// TODO: move this code swh
+			//	if (m_interruptEnables.fields.VBlank & m_IRQs.fields.VBlank) {
+			//		m_currentInstructionCyclesLeft += 8;
+			//		m_interruptsMasterEnable = false;
+			//		m_IRQs.fields.VBlank = 0;
+			//		RST(0x40);
+			//	}
+			//	else if (m_interruptEnables.fields.LCDStat & m_IRQs.fields.LCDStat) {
+			//		m_currentInstructionCyclesLeft += 8;
+			//		m_interruptsMasterEnable = false;
+			//		m_IRQs.fields.LCDStat = 0;
+			//		RST(0x48);
+			//	}
+			//	else if (m_interruptEnables.fields.timer & m_IRQs.fields.timer) {
+			//		m_currentInstructionCyclesLeft += 8;
+			//		m_interruptsMasterEnable = false;
+			//		m_IRQs.fields.timer = 0;
+			//		RST(0x50);
+			//	}
+			//	else if (m_interruptEnables.fields.serial & m_IRQs.fields.serial) {
+			//		m_currentInstructionCyclesLeft += 8;
+			//		m_interruptsMasterEnable = false;
+			//		m_IRQs.fields.serial = 0;
+			//		RST(0x58);
+			//	}
+			//	else if (m_interruptEnables.fields.joypad & m_IRQs.fields.joypad) {
+			//		m_currentInstructionCyclesLeft += 8;
+			//		m_interruptsMasterEnable = false;
+			//		m_IRQs.fields.joypad = 0;
+			//		RST(0x60);
+			//	}
+			//}
 
 			if (m_EICalled) {
 				m_interruptsMasterEnable = true;
@@ -170,6 +170,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0x38: JR(F.carryFlag); break;
 	case 0x39: ADDHL(SP); break;
 	case 0x3A: LDR(A, readByte(HL--)); break;
+	case 0x3B: DECRR(SP); break;
 	case 0x3C: INCR(A); break;
 	case 0x3D: DECR(A); break;
 	case 0x3E: LDR(A, readByte(PC++)); break;
@@ -355,7 +356,7 @@ void CPU::executeInstructionStandard(uint8_t opcode)
 	case 0xFB: m_EICalled = true; break;
 	case 0xFE: CP(readByte(PC++)); break;
 	case 0xFF: RST(0x38); break;
-	default: abort();
+	default: std::cerr << "Illegal opcode: " << std::hex << opcode << '\n'; abort();
 	}
 }
 
@@ -494,8 +495,8 @@ void CPU::ADDHL(uint16_t value)
 
 void CPU::ADDSP()
 {
-	m_currentInstructionCyclesLeft += 4;
-	uint8_t value = readByte(PC++);
+	m_currentInstructionCyclesLeft += 8;
+	int8_t value = readByte(PC++);
 	uint32_t result = SP + value;
 	uint16_t result12bit = (SP & 0xFFF) + (value & 0xFFF);
 	SP = result;
@@ -624,8 +625,15 @@ void CPU::JR(bool flag)
 
 void CPU::LDHLSPImm()
 {
-	__debugbreak();
-	LDRR(HL, SP + readByte(PC++));
+	m_currentInstructionCyclesLeft += 4;
+	int8_t value = readByte(PC++);
+	uint32_t result = SP + value;
+	uint16_t result12bit = (SP & 0xFFF) + (value & 0xFFF);
+	HL = result;
+	F.zeroFlag = (SP == 0); // TODO: different specs
+	F.subtractFlag = 0;
+	F.halfCarryFlag = result12bit >> 12;
+	F.carryFlag = result >> 16;
 }
 
 void CPU::LDM(uint16_t address, uint8_t value)
