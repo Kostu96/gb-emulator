@@ -525,7 +525,6 @@ void CPU::CALL(bool flag)
 {
 	uint16_t address = getImm16();
 	if (flag) {
-		m_currentInstructionCyclesLeft += 4;
 		pushReg16(PC);
 		PC = address;
 	}
@@ -604,7 +603,6 @@ void CPU::JP(bool flag)
 {
 	uint16_t address = getImm16();
 	if (flag) {
-		m_currentInstructionCyclesLeft += 4;
 		PC = address;
 	}
 }
@@ -672,7 +670,6 @@ void CPU::RES(uint8_t bit, uint8_t& reg)
 void CPU::RET(bool flag)
 {
 	if (flag) {
-		m_currentInstructionCyclesLeft += 4;
 		PC = popReg16();
 	}
 }
