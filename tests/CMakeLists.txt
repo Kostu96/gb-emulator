@@ -1,5 +1,6 @@
 set(SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/blargg_tests.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/cpu_tests_8bit_arithmetic.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/cpu_tests_8bit_moves.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/cpu_tests_16bit_arithmetic.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/cpu_tests_16bit_moves.cpp

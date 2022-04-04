@@ -36,3 +36,5 @@ set(TARGET_NAME_TESTS ${TARGET_NAME}_tests)
 add_subdirectory(third_party)
 add_subdirectory(source)
 add_subdirectory(tests)
+
+add_custom_target(run-test-coverage COMMAND OpenCppCoverage --sources source --modules build\\output\\debug -- $<TARGET_FILE:${TARGET_NAME_TESTS}>)

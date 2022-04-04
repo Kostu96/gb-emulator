@@ -12,6 +12,7 @@ struct CPUTests :
 		uint16_t DE;
 		uint16_t HL;
 		uint8_t instructionCyclesLeft;
+		bool interruptsMasterEnable;
 	};
 
 	CPUTests() {
@@ -31,7 +32,8 @@ struct CPUTests :
 			cpu.BC,
 			cpu.DE,
 			cpu.HL,
-			cpu.m_currentInstructionCyclesLeft
+			cpu.m_currentInstructionCyclesLeft,
+			cpu.m_interruptsMasterEnable
 		};
 		return state;
 	}
@@ -44,6 +46,7 @@ struct CPUTests :
 		EXPECT_EQ(state1.DE, state2.DE);
 		EXPECT_EQ(state1.HL, state2.HL);
 		EXPECT_EQ(state1.instructionCyclesLeft, state2.instructionCyclesLeft);
+		EXPECT_EQ(state1.interruptsMasterEnable, state2.interruptsMasterEnable);
 	}
 
 	uint8_t dummyROM[0x110]{};

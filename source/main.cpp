@@ -1,5 +1,4 @@
 // TODO: debug build with checks and realease build without
-// TODO: unit testing
 
 #include "cpu.h"
 #include "memory_map.h"

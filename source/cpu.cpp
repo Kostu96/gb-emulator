@@ -628,7 +628,7 @@ void CPU::LDHLSPImm()
 	uint32_t result = SP + value;
 	uint16_t result12bit = (SP & 0xFFF) + (value & 0xFFF);
 	HL = result;
-	F.zeroFlag = (SP == 0); // TODO: different specs
+	F.zeroFlag = (HL == 0); // TODO: different specs
 	F.subtractFlag = 0;
 	F.halfCarryFlag = result12bit >> 12;
 	F.carryFlag = result >> 16;
@@ -750,7 +750,6 @@ void CPU::RRCA()
 
 void CPU::RST(uint16_t address)
 {
-	m_currentInstructionCyclesLeft += 4;
 	pushReg16(PC);
 	PC = address;
 }

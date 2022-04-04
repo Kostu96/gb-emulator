@@ -1,10 +1,10 @@
 #include "cpu_tests_fixture.h"
 
-using CPUTestsMisc = CPUTests;
+using CPUTests8bitArithmetic = CPUTests;
 
-TEST_F(CPUTestsMisc, NOPTest)
+TEST_F(CPUTests8bitArithmetic, INC_BTest)
 {
-	dummyROM[0x100] = 0x00;
+	dummyROM[0x100] = 0x04;
 	memoryMap.getCartridge().loadFromMemory(dummyROM, sizeof(dummyROM));
 
 	CPUState preExecutionState = dumpCPUState();
@@ -14,4 +14,5 @@ TEST_F(CPUTestsMisc, NOPTest)
 	preExecutionState.PC = 0x101;
 
 	compareCPUStates(preExecutionState, postExecutionState);
+	EXPECT_TRUE(false);
 }

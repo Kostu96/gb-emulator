@@ -239,9 +239,10 @@ TEST_F(CPUTests16bitMoves, PUSH_AFTest)
 
 TEST_F(CPUTests16bitMoves, LDRR_HL_SPPlusImmediateTest)
 {
-	// TODO: test negative numbers
 	dummyROM[0x100] = 0xF8;
 	dummyROM[0x101] = 0x42;
+	dummyROM[0x102] = 0xF8;
+	dummyROM[0x103] = 0xBE;
 	cpu.SP = 0xDE00;
 	cpu.F.byte &= 0x0F;
 	memoryMap.getCartridge().loadFromMemory(dummyROM, sizeof(dummyROM));
@@ -250,9 +251,22 @@ TEST_F(CPUTests16bitMoves, LDRR_HL_SPPlusImmediateTest)
 	cpu.doCycles(12);
 	CPUState postExecutionState = dumpCPUState();
 
-	preExecutionState.PC += 2;
+	preExecutionState.PC = 0x102;
 	preExecutionState.HL = 0xDE42;
 	preExecutionState.AF |= 0x000F;
+
+	compareCPUStates(preExecutionState, postExecutionState);
+
+	cpu.SP = 0xDE42;
+	cpu.F.byte &= 0x0F;
+
+	preExecutionState = dumpCPUState();
+	cpu.doCycles(12);
+	postExecutionState = dumpCPUState();
+
+	preExecutionState.PC = 0x104;
+	preExecutionState.HL = 0xDE00;
+	preExecutionState.AF |= 0x002F;
 
 	compareCPUStates(preExecutionState, postExecutionState);
 }
