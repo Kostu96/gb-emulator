@@ -4,6 +4,7 @@ set(SOURCE_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/cpu_tests_16bit_arithmetic.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/cpu_tests_16bit_moves.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/cpu_tests_fixture.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/cpu_tests_jumps.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/cpu_tests_misc.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/gameboy_fixture.h
     ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
